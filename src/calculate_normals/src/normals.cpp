@@ -124,7 +124,7 @@ int main (int argc, char** argv)
 
     // Create a ROS publisher for the output point cloud
     pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 10, 1);
-    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 10, 1);
+    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 1, 1);
 
 
 
