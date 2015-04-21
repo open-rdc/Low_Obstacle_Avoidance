@@ -120,7 +120,7 @@ int main (int argc, char** argv)
 
     ros::Rate loop_rate(10);
     // Create a ROS subscriber for the input point cloud
-    ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 10, normalCallback);
+    ros::Subscriber sub = nh.subscribe ("/input", 10, normalCallback);
 
     // Create a ROS publisher for the output point cloud
     pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 10, 1);
