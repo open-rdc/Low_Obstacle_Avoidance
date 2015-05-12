@@ -37,7 +37,7 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
 
     pcl::VoxelGrid<pcl::PointXYZ> sor;
     sor.setInputCloud (cloud2);
-    sor.setLeafSize (0.1, 0.1, 0.1);
+    sor.setLeafSize (0.04, 0.04, 0.04);
     sor.filter (*cloud2);
 
     poseArray.header.stamp = ros::Time::now();
@@ -53,8 +53,8 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
 
 
 
-    /******************Display filtered cloud based on height********/
-  /*  pcl::toROSMsg (*normals, output_normals);
+    /******************Display filtered cloud based on height********
+    pcl::toROSMsg (*normals, output_normals);
     pcl::concatenateFields (*cloud, output_normals, cloud_normals);
 
     pcl::fromROSMsg (cloud_normals, *cloud_pass);
@@ -72,29 +72,31 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
 
     ROS_INFO("points: %lu\n", cloud_filtered2->points.size());
 
-    ***************************************************************/
-
-
+   ***************************************************************/
     /***********************publish normal vectors************************/
     for(size_t i = 0; i<normals->points.size(); ++i)
     {
+        normals->points[i].x = cloud2->points[i].x;
+        normals->points[i].y = cloud2->points[i].y;
+        normals->points[i].z = cloud2->points[i].z;
 
         // Declare goal output pose
         geometry_msgs::PoseStamped pose;
         geometry_msgs::Quaternion msg;
 
         tf::Vector3 axis_vector(normals->points[i].normal[0], normals->points[i].normal[1], normals->points[i].normal[2]);
-        tf::Vector3 up_vector(0.0, 0.0, 1.0);
-
+        tf::Vector3 up_vector(1.0, 0.0, 0.0);
+                  
+        //cross(外積)　dot(内積) normalize(正規化)
         tf::Vector3 right_vector = axis_vector.cross(up_vector);
         right_vector.normalized();
         tf::Quaternion q(right_vector, -1.0*acos(axis_vector.dot(up_vector)));
         q.normalize();
         tf::quaternionTFToMsg(q, msg);
 
-        pose.pose.position.x = cloud2->points[i].x;
-        pose.pose.position.y = cloud2->points[i].y;
-        pose.pose.position.z = cloud2->points[i].z;
+        pose.pose.position.x = normals->points[i].x;
+        pose.pose.position.y = normals->points[i].y;
+        pose.pose.position.z = normals->points[i].z;
 
         pose.pose.orientation = msg;
 
@@ -107,9 +109,7 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
     pcl::toROSMsg (*cloud2, cloud_filtered);
     // Publish the data
     pub.publish (cloud_filtered);
-    ROS_INFO("poseArray size: %i", poseArray.poses.size());
-    /***************************************************************/
-
+    ROS_INFO("poseArray size: %i\n", poseArray.poses.size());
 }
 
 int main (int argc, char** argv)
