@@ -6,11 +6,9 @@ project(pcl_matching)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   cmake_modules
-  libpcl-all-dev
-  pcl
   pcl_conversions
   pcl_ros
-  roscpp_
+  roscpp
   sensor_msgs
 )
 
@@ -165,3 +163,6 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(pcl_matching src/pcl_matching.cpp)
+target_link_libraries(pcl_matching ${catkin_LIBRARIES})
