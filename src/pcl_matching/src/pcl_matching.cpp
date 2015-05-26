@@ -33,7 +33,7 @@ class cloudHandler
             icp.setInputSource(cloud_in.makeShared());
             icp.setInputTarget(cloud_out.makeShared());
 
-            icp.setMaxCorrespondenceDistance(5);
+            icp.setMaxCorrespondenceDistance(0.05);
             icp.setMaximumIterations(100);
             icp.setTransformationEpsilon (1e-12);
             icp.setEuclideanFitnessEpsilon(0.1);
