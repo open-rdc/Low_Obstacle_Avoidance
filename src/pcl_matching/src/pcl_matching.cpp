@@ -9,7 +9,7 @@ class cloudHandler
     public:
         cloudHandler()
         {
-            pcl_sub = nh.subscribe("pcl_downsampled", 10, &cloudHandler::cloudCB, this);
+            pcl_sub = nh.subscribe("input", 10, &cloudHandler::cloudCB, this);
             pcl_pub = nh.advertise<sensor_msgs::PointCloud2>("pcl_matched", 1);
         }
 
