@@ -34,12 +34,12 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
 
 
     pcl::fromROSMsg (*cloud, *cloud2);
-
+/*
     pcl::VoxelGrid<pcl::PointXYZ> sor;
     sor.setInputCloud (cloud2);
     sor.setLeafSize (0.04, 0.04, 0.04);
     sor.filter (*cloud2);
-
+*/
     poseArray.header.stamp = ros::Time::now();
     poseArray.header.frame_id = cloud2->header.frame_id; //EDITED
     ROS_INFO_STREAM("poseArray.header: frame=" << poseArray.header.frame_id); //Outputs "/map"
@@ -120,7 +120,7 @@ int main (int argc, char** argv)
 
     ros::Rate loop_rate(10);
     // Create a ROS subscriber for the input point cloud
-    ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 10, normalCallback);
+    ros::Subscriber sub = nh.subscribe ("/limited_cloud", 10, normalCallback);
 
     // Create a ROS publisher for the output point cloud
     pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 10, 1);

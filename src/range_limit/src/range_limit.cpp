@@ -25,11 +25,11 @@ void limitCallback (const sensor_msgs::PointCloudConstPtr& cloud1)
     sensor_msgs::PointCloud2 cloud3;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 
-    sensor_msgs::convertPointCloudToPointCloud2 (*cloud1, cloud3);
-    pcl::fromROSMsg (cloud3, *cloud);
-    
-    cloud->width = 5;
-    cloud->height = 1;
+    sensor_msgs::convertPointCloudToPointCloud2 (*cloud1, cloud2);
+    pcl::fromROSMsg (cloud2, *cloud);
+/*    
+    cloud->width = 105;
+    cloud->height = 25;
     cloud->points.resize (cloud->width * cloud->height);
 
     for (size_t i = 0; i > cloud->points.size (); ++i)
@@ -44,24 +44,23 @@ void limitCallback (const sensor_msgs::PointCloudConstPtr& cloud1)
         std::cerr << "    " << cloud->points[i].x << " " 
             << cloud->points[i].y << " " 
             << cloud->points[i].z << std::endl;
-
+*/
     // Create the filtering object
     pcl::PassThrough<pcl::PointXYZ> pass;
     pass.setInputCloud (cloud);
     pass.setFilterFieldName ("z");
-    pass.setFilterLimits (0.0, 1.0);
+    pass.setFilterLimits (-1.0, -0.3);
     //pass.setFilterLimitsNegative (true);
     pass.filter (*cloud_filtered);
 
-    std::cerr << "Cloud after filtering: " << std::endl;
+  /*  std::cerr << "Cloud after filtering: " << std::endl;
     for (size_t i = 0; i < cloud_filtered->points.size (); ++i)
         std::cerr << "    " << cloud_filtered->points[i].x << " " 
             << cloud_filtered->points[i].y << " " 
             << cloud_filtered->points[i].z << std::endl;
-
-    pcl::toROSMsg(*cloud_filtered, cloud2);
-
-    pub.publish (cloud2);
+*/
+    pcl::toROSMsg(*cloud_filtered, cloud3);
+    pub.publish (cloud3);
 }
 
 int main (int argc, char** argv)
@@ -73,7 +72,7 @@ int main (int argc, char** argv)
 
     ros::Subscriber sub = nh.subscribe ("/scan2", 10, limitCallback);
 
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/limit_cloud", 10, 1);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/limited_cloud", 10, 1);
 
     ros::spin();
 }
