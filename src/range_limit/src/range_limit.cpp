@@ -2,6 +2,8 @@
 #include <iostream>
 #include <pcl_ros/point_cloud.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/point_cloud_conversion.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -16,16 +18,16 @@
 
 ros::Publisher pub;
 
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
-
-void limitCallback (const /*PointCloud::ConstPtr&*/pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+void limitCallback (const sensor_msgs::PointCloudConstPtr& cloud1)
 {
-
-//    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    sensor_msgs::PointCloud2 cloud2;
     sensor_msgs::PointCloud2 cloud3;
-    //pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 
+    sensor_msgs::convertPointCloudToPointCloud2 (*cloud1, cloud3);
+    pcl::fromROSMsg (cloud3, *cloud);
+    
     cloud->width = 5;
     cloud->height = 1;
     cloud->points.resize (cloud->width * cloud->height);
@@ -57,9 +59,9 @@ void limitCallback (const /*PointCloud::ConstPtr&*/pcl::PointCloud<pcl::PointXYZ
             << cloud_filtered->points[i].y << " " 
             << cloud_filtered->points[i].z << std::endl;
 
-    pcl::toROSMsg(*cloud_filtered, cloud3);
+    pcl::toROSMsg(*cloud_filtered, cloud2);
 
-    pub.publish (cloud3);
+    pub.publish (cloud2);
 }
 
 int main (int argc, char** argv)
