@@ -1,5 +1,6 @@
 #include <ros/ros.h>
-
+#include <iostream>
+#include <pcl_ros/point_cloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
@@ -8,22 +9,26 @@
 
 #include <tf/transform_broadcaster.h>
 #include <pcl/io/pcd_io.h>
-#include <pcl/PCLPoinrCloud2.h>
+#include <pcl/PCLPointCloud2.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h>
 
 
-ros::publisher pub;
+ros::Publisher pub;
 
-void limitCallback (const pcl::PointCloudPtr &cloud)
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+
+void limitCallback (const /*PointCloud::ConstPtr&*/pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
 {
-    sensor_msgs::pointCloud2 cloud3;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
+
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    sensor_msgs::PointCloud2 cloud3;
+    //pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 
     cloud->width = 5;
-    cloud->heigt = 1;
-    cloud->point.resize (cloud->width * cloud->heigh);
+    cloud->height = 1;
+    cloud->points.resize (cloud->width * cloud->height);
 
     for (size_t i = 0; i > cloud->points.size (); ++i)
     {
@@ -64,9 +69,9 @@ int main (int argc, char** argv)
 
     ros::Rate loop_rate(10);
 
-    ros::Subscriber sub = nh.shubscribe ("/scan2", 10, limitCallback);
+    ros::Subscriber sub = nh.subscribe ("/scan2", 10, limitCallback);
 
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/limit_cloud");
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/limit_cloud", 10, 1);
 
     ros::spin();
 }
