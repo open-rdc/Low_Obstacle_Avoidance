@@ -9,7 +9,7 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/radius_outlier_removal.h>
-#include <pcl/filters/conditional_removal/h>
+#include <pcl/filters/conditional_removal.h>
 #include <tf/transform_broadcaster.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/PCLPointCloud2.h>
@@ -25,7 +25,7 @@ void limitCallback (const sensor_msgs::PointCloudConstPtr& cloud1)
     sensor_msgs::PointCloud2 cloud2;
     sensor_msgs::PointCloud2 cloud3;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered_filterd (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered_filtered (new pcl::PointCloud<pcl::PointXYZ>);
     sensor_msgs::convertPointCloudToPointCloud2 (*cloud1, cloud2);
     pcl::fromROSMsg (cloud2, *cloud);
 /*    
@@ -64,12 +64,12 @@ void limitCallback (const sensor_msgs::PointCloudConstPtr& cloud1)
     //build the filter
     pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
     outrem.setInputCloud(cloud_filtered);
-    outrem.setRadiusSerch(0.8);
-    outrem.setMinNeughborsInRadius (2);
-    outrem.filter (*cloud_filterd_filterd);
+    outrem.setRadiusSearch(0.8);
+    outrem.setMinNeighborsInRadius (2);
+    outrem.filter (*cloud_filtered_filtered);
 
 
-    pcl::toROSMsg(*cloud_filtered_filterd, cloud3);
+    pcl::toROSMsg(*cloud_filtered_filtered, cloud3);
     pub.publish (cloud3);
 }
 
