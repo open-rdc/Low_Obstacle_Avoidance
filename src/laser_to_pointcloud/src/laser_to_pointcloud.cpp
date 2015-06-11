@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 
+#include <laser_geometry/laser_geometry.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/LaserScan.h>
@@ -8,6 +9,7 @@
 #include <pcl/point_types.h>
 
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 #include <geometry_msgs/Pose.h>
 #include <vector>
 
@@ -43,6 +45,7 @@ int main (int argc, char** argv)
 
     ros::Subscriber sub = nh.subscribe ("/scan2", 40, scanCallback);
 
-    pub = nh.adcertise<sensor_msgs::PointCloud> ("/to_pointcloud", 40, 1);
+    pub = nh.advertise<sensor_msgs::PointCloud> ("/to_pointcloud", 40, 1);
 
     ros::spin();
+}
