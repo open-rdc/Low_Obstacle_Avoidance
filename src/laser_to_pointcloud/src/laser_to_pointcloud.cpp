@@ -31,7 +31,7 @@ class My_Filter
 
 My_Filter::My_Filter(){
     scan_sub_ = node_.subscribe<sensor_msgs::LaserScan> ("/scan2", 40, &My_Filter::scanCallback, this);
-    point_cloud_publisher_ = node_.advertise<sensor_msgs::PointCloud2> ("/to_cloud", 40, false);
+    point_cloud_publisher_ = node_.advertise<sensor_msgs::PointCloud> ("/to_cloud", 40, false);
     tfListener_.setExtrapolationLimit(ros::Duration(0.1));
 }
 
@@ -44,7 +44,7 @@ void My_Filter::scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
                 ros::Duration(1.0))){
         return;
     }
-    sensor_msgs::PointCloud2 cloud;
+    sensor_msgs::PointCloud cloud;
     projector_.transformLaserScanToPointCloud("base_link", *scan_in, cloud, tfListener_);
     point_cloud_publisher_.publish(cloud);
 
