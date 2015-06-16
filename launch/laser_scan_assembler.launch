@@ -4,7 +4,7 @@
 
     <node type="laser_scan_assembler" pkg="laser_assembler"
             name="synchronize_assembler">
-        <remap from="scan" to="move_scan"/>
+        <remap from="scan" to="scan2"/>
         <param name="max_scans" type="int" value="1000" />
         <param name="fixed_frame" type="string" value="map" />
     </node>
