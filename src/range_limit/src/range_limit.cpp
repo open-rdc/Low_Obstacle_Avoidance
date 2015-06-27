@@ -62,14 +62,14 @@ void limitCallback (const sensor_msgs::PointCloudConstPtr& cloud1)
 */
 
     //build the filter
-    pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
+/*    pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
     outrem.setInputCloud(cloud_filtered);
     outrem.setRadiusSearch(0.8);
     outrem.setMinNeighborsInRadius (2);
     outrem.filter (*cloud_filtered_filtered);
+*/
 
-
-    pcl::toROSMsg(*cloud_filtered_filtered, cloud3);
+    pcl::toROSMsg(*cloud_filtered, cloud3);
     pub.publish (cloud3);
 }
 
@@ -77,12 +77,8 @@ int main (int argc, char** argv)
 {
     ros::init (argc, argv, "range_limit");
     ros::NodeHandle nh;
-
     ros::Rate loop_rate(10);
-
-    ros::Subscriber sub = nh.subscribe ("/scan2", 10, limitCallback);
-
+    ros::Subscriber sub = nh.subscribe ("assembled_cloud", 10, limitCallback);
     pub = nh.advertise<sensor_msgs::PointCloud2> ("/limited_cloud", 10, 1);
-
     ros::spin();
 }
