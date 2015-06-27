@@ -77,12 +77,8 @@ int main (int argc, char** argv)
 {
     ros::init (argc, argv, "range_limit");
     ros::NodeHandle nh;
-
     ros::Rate loop_rate(10);
-
-    ros::Subscriber sub = nh.subscribe ("/to_pointcloud", 10, limitCallback);
-
+    ros::Subscriber sub = nh.subscribe ("assembled_cloud", 10, limitCallback);
     pub = nh.advertise<sensor_msgs::PointCloud2> ("/limited_cloud", 10, 1);
-
     ros::spin();
 }
