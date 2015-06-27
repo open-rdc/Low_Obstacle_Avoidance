@@ -1,7 +1,7 @@
 <launch>
     <node type="periodic_snapshotter" pkg="laser_assembler" name="my_point_cloud_assenbler">
     </node>
-    <node type="point_cloud_assembler" pkg="laser_assembler"
+    <node type="point_cloud2_assembler" pkg="laser_assembler"
             name="my_assembler">
         <remap from="cloud" to="to_cloud"/>
         <param name="max_clouds" type="int" value="500" />

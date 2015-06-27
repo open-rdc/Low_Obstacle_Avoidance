@@ -1,15 +1,19 @@
 #include <ros/ros.h>
+#include <iostream>
 // PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/point_cloud_conversion.h>
+
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-
 #include <tf/transform_broadcaster.h>
 #include <pcl/io/pcd_io.h>
-#include<pcl/PCLPointCloud2.h>
+#include <pcl/PCLPointCloud2.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/voxel_grid.h>
+
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h>
 //#include <geometry_msgs/PoseWithCovarianceStamped.h>
@@ -20,8 +24,10 @@ ros::Publisher pub;
 ros::Publisher poseArrayPub;
 geometry_msgs::PoseArray poseArray; // particles as PoseArray (preallocated)
 
-void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
+void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
 {
+    sensor_msgs::PointCloud2 cloud1;
+    sensor_msgs::convertPointCloudToPointCloud2 (*cloud, cloud1);
 
     sensor_msgs::PointCloud2 output_normals;
     sensor_msgs::PointCloud2 cloud_normals;
@@ -32,8 +38,7 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
 
     // Start making result
 
-
-    pcl::fromROSMsg (*cloud, *cloud2);
+    pcl::fromROSMsg (cloud1, *cloud2);
 /*
     pcl::VoxelGrid<pcl::PointXYZ> sor;
     sor.setInputCloud (cloud2);
@@ -118,13 +123,13 @@ int main (int argc, char** argv)
     ros::init (argc, argv, "normal_filter");
     ros::NodeHandle nh;
 
-    ros::Rate loop_rate(10);
+    ros::Rate loop_rate(40);
     // Create a ROS subscriber for the input point cloud
-    ros::Subscriber sub = nh.subscribe ("/limited_cloud", 10, normalCallback);
+    ros::Subscriber sub = nh.subscribe ("/assembled_cloud", 40, normalCallback);
 
     // Create a ROS publisher for the output point cloud
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 10, 1);
-    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 10, 1);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 40, 1);
+    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 40, 1);
 
 
 
