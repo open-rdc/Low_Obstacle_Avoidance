@@ -16,17 +16,24 @@
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h>
+//#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <vector>
 
 
 class normals{
 public:
     normals(){
-       // pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 10);
-        poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 10);
+    cloud_sub = nh.subscribe ("/assembled_cloud", 40, &normals::normalCallback, this);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 40, 1);
+    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 40, 1);
+    ros::Rate loop_Rate(40);
 }
+
 void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
 {
+}
+
+void calc(){
     sensor_msgs::PointCloud2 cloud1;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
     sensor_msgs::convertPointCloudToPointCloud2 (*cloud, cloud1);
@@ -38,12 +45,12 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
 
     pcl::fromROSMsg (cloud1, *cloud2);
 
-    /*
-       pcl::VoxelGrid<pcl::PointXYZ> sor;
-       sor.setInputCloud (cloud2);
-       sor.setLeafSize (0.04, 0.04, 0.04);
-       sor.filter (*cloud2);
-       */
+/*
+    pcl::VoxelGrid<pcl::PointXYZ> sor;
+    sor.setInputCloud (cloud2);
+    sor.setLeafSize (0.04, 0.04, 0.04);
+    sor.filter (*cloud2);
+*/
     poseArray.header.stamp = ros::Time::now();
     poseArray.header.frame_id = cloud2->header.frame_id; //EDITED
     ROS_INFO_STREAM("poseArray.header: frame=" << poseArray.header.frame_id); //Outputs "/map"
@@ -67,7 +74,7 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
 
         tf::Vector3 axis_vector(normals->points[i].normal[0], normals->points[i].normal[1], normals->points[i].normal[2]);
         tf::Vector3 up_vector(1.0, 0.0, 0.0);
-
+                  
         //cross(外積)　dot(内積) normalize(正規化)
         tf::Vector3 right_vector = axis_vector.cross(up_vector);
         right_vector.normalized();
@@ -82,52 +89,37 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
         pose.pose.orientation = msg;
 
         poseArray.poses.push_back(pose.pose);
+
     }
 
     poseArrayPub.publish(poseArray);
 
     pcl::toROSMsg (*cloud2, cloud_filtered);
     // Publish the data
-    int i;
-    i=poseArray.poses.size();
-    //pub.publish (cloud_filtered);
-    ROS_INFO("poseArray size: %d\n", i);
+    pub.publish (cloud_filtered);
+    ROS_INFO("poseArray size: %i\n", poseArray.poses.size());
 }
 
-void checkSubscribers(){
-    if(poseArrayPub.getNumSubscribers() == 0){
-        if(cloud_sub){
-            cloud_sub.shutdown();
-            ROS_INFO("unsubscribe");
-        }
-    }else{
-        if(!cloud_sub){
-            cloud_sub = nh.subscribe("assembled_cloud", 1, &normals::normalCallback, this);
-            ROS_INFO("subscribe");
-        }
+void run (){
+    while(ros::ok()){
+        calc();
+        ros::spinOnce();
     }
 }
 
 private:
-        ros::NodeHandle nh;
-        ros::Subscriber cloud_sub;
-        ros::Publisher pub;
-        ros::Publisher poseArrayPub;
-        geometry_msgs::PoseArray poseArray;
+    ros::NodeHandle nh;
+    ros::Subscriber cloud_sub;
+    ros::Publisher pub;
+    ros::Publisher poseArrayPub;
+    geometry_msgs::PoseArray poseArray;
 };
 
 int main (int argc, char** argv)
 {
     ros::init (argc, argv, "normal_filter");
     normals normals;
-    ros::Rate r(10);
-
-    while(ros::ok()){
-        ros::spinOnce();
-        normals.checkSubscribers();
-
-        r.sleep();
-    }
+    normals.run();
 
     return 0;
 }

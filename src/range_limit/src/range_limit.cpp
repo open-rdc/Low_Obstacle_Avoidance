@@ -50,7 +50,7 @@ void limitCallback (const sensor_msgs::PointCloudConstPtr& cloud1)
     pcl::PassThrough<pcl::PointXYZ> pass;
     pass.setInputCloud (cloud);
     pass.setFilterFieldName ("z");
-    pass.setFilterLimits (-1.0, -0.3);
+    pass.setFilterLimits (0.0, 1.0);
     //pass.setFilterLimitsNegative (true);
     pass.filter (*cloud_filtered);
 
