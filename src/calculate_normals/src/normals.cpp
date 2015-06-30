@@ -24,10 +24,10 @@ ros::Publisher pub;
 ros::Publisher poseArrayPub;
 geometry_msgs::PoseArray poseArray; // particles as PoseArray (preallocated)
 
-void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
+void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
-    sensor_msgs::PointCloud2 cloud1;
-    sensor_msgs::convertPointCloudToPointCloud2 (*cloud, cloud1);
+    //sensor_msgs::PointCloud2 cloud1;
+    //sensor_msgs::convertPointCloudToPointCloud2 (cloud_s, cloud1);
 
     sensor_msgs::PointCloud2 output_normals;
     sensor_msgs::PointCloud2 cloud_normals;
@@ -38,7 +38,7 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
 
     // Start making result
 
-    pcl::fromROSMsg (cloud1, *cloud2);
+    pcl::fromROSMsg (*cloud, *cloud2);
 /*
     pcl::VoxelGrid<pcl::PointXYZ> sor;
     sor.setInputCloud (cloud2);
@@ -52,7 +52,7 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
     // estimate normals
     pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
     ne.setInputCloud(cloud2);
-    ne.setKSearch (8);
+    ne.setKSearch (24);
     pcl::PointCloud<pcl::PointNormal>::Ptr normals (new pcl::PointCloud<pcl::PointNormal>);
     ne.compute(*normals);
 
@@ -125,13 +125,11 @@ int main (int argc, char** argv)
 
     ros::Rate loop_rate(40);
     // Create a ROS subscriber for the input point cloud
-    ros::Subscriber sub = nh.subscribe ("/assembled_cloud", 40, normalCallback);
+    ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 40, normalCallback);
 
     // Create a ROS publisher for the output point cloud
     pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 40, 1);
     poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 40, 1);
-
-
 
     // Spin
     ros::spin();
