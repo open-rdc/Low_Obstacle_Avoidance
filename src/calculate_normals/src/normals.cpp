@@ -97,6 +97,8 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
         right_vector.normalized();
         tf::Quaternion q(right_vector, -1.0*acos(axis_vector.dot(up_vector)));
         q.normalize();
+        if(0.5 < -1.0*acos(axis_vector.dot(up_vector)))
+        {
         tf::quaternionTFToMsg(q, msg);
 
         pose.pose.position.x = normals->points[i].x;
@@ -106,7 +108,7 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
         pose.pose.orientation = msg;
 
         poseArray.poses.push_back(pose.pose);
-
+        }
     }
 
     poseArrayPub.publish(poseArray);
