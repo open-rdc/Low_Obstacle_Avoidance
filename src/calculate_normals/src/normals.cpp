@@ -18,6 +18,7 @@
 #include <geometry_msgs/PoseArray.h>
 //#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <vector>
+#include <angles/angles.h>
 
 
 ros::Publisher pub;
@@ -95,10 +96,15 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
         //cross(外積)　dot(内積) normalize(正規化)
         tf::Vector3 right_vector = axis_vector.cross(up_vector);
         right_vector.normalized();
-        tf::Quaternion q(right_vector, -1.0*acos(axis_vector.dot(up_vector)));
+        double angle = -1.0*acos(axis_vector.dot(up_vector));
+        tf::Quaternion q(right_vector, angle);
         q.normalize();
-        if(0.5 < -1.0*acos(axis_vector.dot(up_vector)))
+       // double deg = angles::to_degrees(angle);
+        double rad = q.getAngle();
+
+        if(!(1.5 < rad && rad < 2.0))
         {
+        ROS_INFO("get_angle: %lf\n", rad);
         tf::quaternionTFToMsg(q, msg);
 
         pose.pose.position.x = normals->points[i].x;
@@ -116,7 +122,9 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
     pcl::toROSMsg (*cloud2, cloud_filtered);
     // Publish the data
     pub.publish (cloud_filtered);
-    ROS_INFO("poseArray size: %i\n", poseArray.poses.size());
+    int j;
+    j=poseArray.poses.size();
+    ROS_INFO("poseArray size: %d\n", j);
 }
 
 int main (int argc, char** argv)
@@ -125,13 +133,13 @@ int main (int argc, char** argv)
     ros::init (argc, argv, "normal_filter");
     ros::NodeHandle nh;
 
-    ros::Rate loop_rate(40);
+    ros::Rate loop_rate(2);
     // Create a ROS subscriber for the input point cloud
-    ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 40, normalCallback);
+    ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 2, normalCallback);
 
     // Create a ROS publisher for the output point cloud
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 40, 1);
-    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 40, 1);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 2, 1);
+    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 2, 1);
 
     // Spin
     ros::spin();
