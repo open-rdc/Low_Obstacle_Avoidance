@@ -102,7 +102,7 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
        // double deg = angles::to_degrees(angle);
         double rad = q.getAngle();
 
-        if(!(1.5 < rad && rad < 2.0))
+        if(!(1.48 < rad && rad < 1.65))
         {
         ROS_INFO("get_angle: %lf\n", rad);
         tf::quaternionTFToMsg(q, msg);
