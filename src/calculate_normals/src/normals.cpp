@@ -134,7 +134,7 @@ int main (int argc, char** argv)
     ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 2, normalCallback);
 
     // Create a ROS publisher for the output point cloud
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 2, 1);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 2, 1);
     poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 2, 1);
 
     // Spin
