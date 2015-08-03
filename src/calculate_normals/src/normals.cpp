@@ -46,6 +46,7 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
     sor.setLeafSize (0.04, 0.04, 0.04);
     sor.filter (*cloud2);
 */
+    poseArray.poses.clear();
     poseArray.header.stamp = ros::Time::now();
     poseArray.header.frame_id = cloud2->header.frame_id; //EDITED
     ROS_INFO_STREAM("poseArray.header: frame=" << poseArray.header.frame_id); //Outputs "/map"
