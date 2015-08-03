@@ -18,14 +18,15 @@
 #include <geometry_msgs/PoseArray.h>
 //#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <vector>
+#include <angles/angles.h>
 
 
 class normals{
 public:
     normals(){
-    cloud_sub = nh.subscribe ("/assembled_cloud", 40, &normals::normalCallback, this);
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 40, 1);
-    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 40, 1);
+    cloud_sub = nh.subscribe ("/assembled_cloud", 2, &normals::normalCallback, this);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/voxel_filter_filtered_pcl", 2, 1);
+    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 2, 1);
     ros::Rate loop_Rate(40);
 }
 
@@ -80,6 +81,10 @@ void calc(){
         right_vector.normalized();
         tf::Quaternion q(right_vector, -1.0*acos(axis_vector.dot(up_vector)));
         q.normalize();
+        double rad = q.getAngle();
+
+        if(!(1.48 < rad && rad < 1.65))
+        {
         tf::quaternionTFToMsg(q, msg);
 
         pose.pose.position.x = normals->points[i].x;
@@ -89,6 +94,7 @@ void calc(){
         pose.pose.orientation = msg;
 
         poseArray.poses.push_back(pose.pose);
+        }
 
     }
 

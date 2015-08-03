@@ -17,6 +17,7 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h>
 #include <vector>
+#include <angles/angles.h>
 
 
 class normals{
@@ -73,6 +74,10 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
         right_vector.normalized();
         tf::Quaternion q(right_vector, -1.0*acos(axis_vector.dot(up_vector)));
         q.normalize();
+        double rad = q.getAngle();
+
+        if(!(1.48 < rad && rad < 1.65))
+        {
         tf::quaternionTFToMsg(q, msg);
 
         pose.pose.position.x = normals->points[i].x;
@@ -82,6 +87,7 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
         pose.pose.orientation = msg;
 
         poseArray.poses.push_back(pose.pose);
+        }
     }
 
     poseArrayPub.publish(poseArray);
