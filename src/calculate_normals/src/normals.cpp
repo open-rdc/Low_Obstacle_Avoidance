@@ -13,6 +13,9 @@
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/conditional_removal.h>
+#include <pcl/filters/radius_outlier_removal.h>
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h>
@@ -35,8 +38,7 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
     sensor_msgs::PointCloud2 cloud_normals;
     sensor_msgs::PointCloud2 cloud_filtered;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud_pass (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud_filtered2 (new pcl::PointCloud<pcl::PointXYZRGBNormal>);   
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered2 (new pcl::PointCloud<pcl::PointXYZ>);   
     float NaN = std::numeric_limits<float>::quiet_NaN();
 
     // Start making result
@@ -53,41 +55,26 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
     poseArray.header.frame_id = cloud2->header.frame_id; //EDITED
     ROS_INFO_STREAM("poseArray.header: frame=" << poseArray.header.frame_id); //Outputs "/map"
 
+    //Create the filtering object
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud (cloud2);
+    pass.setFilterFieldName("z");
+    pass.setFilterLimits (-1.0, 1.0);
+    pass.filter (*cloud_filtered2);
+
     // estimate normals
     pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
-    ne.setInputCloud(cloud2);
+    ne.setInputCloud(cloud_filtered2);
     ne.setKSearch (24);
     pcl::PointCloud<pcl::PointNormal>::Ptr normals (new pcl::PointCloud<pcl::PointNormal>);
     ne.compute(*normals);
 
-
-
-    /******************Display filtered cloud based on height********
-    pcl::toROSMsg (*normals, output_normals);
-    pcl::concatenateFields (*cloud, output_normals, cloud_normals);
-
-    pcl::fromROSMsg (cloud_normals, *cloud_pass);
-
-
-
-    // Create the filtering object
-    pcl::PassThrough<pcl::PointXYZRGBNormal> pass;
-    pass.setInputCloud (cloud_pass);
-    pass.setFilterFieldName ("z");
-    pass.setFilterLimits (0.0, 1.0);
-    pass.filter (*cloud_filtered2);
-
-
-
-    ROS_INFO("points: %lu\n", cloud_filtered2->points.size());
-
-   ***************************************************************/
     /***********************publish normal vectors************************/
     for(size_t i = 0; i<normals->points.size(); ++i)
     {
-        normals->points[i].x = cloud2->points[i].x;
-        normals->points[i].y = cloud2->points[i].y;
-        normals->points[i].z = cloud2->points[i].z;
+        normals->points[i].x = cloud_filtered2->points[i].x;
+        normals->points[i].y = cloud_filtered2->points[i].y;
+        normals->points[i].z = cloud_filtered2->points[i].z;
 
         // Declare goal output pose
         geometry_msgs::PoseStamped pose;
@@ -113,23 +100,23 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
         pose.pose.position.x = normals->points[i].x;
         pose.pose.position.y = normals->points[i].y;
         pose.pose.position.z = normals->points[i].z;
-        cloud2->points[i].x = normals->points[i].x;
-        cloud2->points[i].y = normals->points[i].y;
-        cloud2->points[i].z = 0;
+        cloud_filtered2->points[i].x = normals->points[i].x;
+        cloud_filtered2->points[i].y = normals->points[i].y;
+        cloud_filtered2->points[i].z = 0;
 
         pose.pose.orientation = msg;
 
         poseArray.poses.push_back(pose.pose);
         }else{
-            cloud2->points[i].x = NaN;
-            cloud2->points[i].y = NaN;
-            cloud2->points[i].z = NaN;
+            cloud_filtered2->points[i].x = NaN;
+            cloud_filtered2->points[i].y = NaN;
+            cloud_filtered2->points[i].z = NaN;
         }
     }
 
     poseArrayPub.publish(poseArray);
 
-    pcl::toROSMsg (*cloud2, cloud_filtered);
+    pcl::toROSMsg (*cloud_filtered2, cloud_filtered);
     // Publish the data
     pub.publish (cloud_filtered);
     int j;
