@@ -19,6 +19,7 @@
 //#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <vector>
 #include <angles/angles.h>
+#include <limits>
 
 
 ros::Publisher pub;
@@ -36,6 +37,7 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud_pass (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
     pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud_filtered2 (new pcl::PointCloud<pcl::PointXYZRGBNormal>);   
+    float NaN = std::numeric_limits<float>::quiet_NaN();
 
     // Start making result
 
@@ -119,9 +121,9 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
 
         poseArray.poses.push_back(pose.pose);
         }else{
-            cloud2->points[i].x = 0;
-            cloud2->points[i].y = 0;
-            cloud2->points[i].z = 0;
+            cloud2->points[i].x = NaN;
+            cloud2->points[i].y = NaN;
+            cloud2->points[i].z = NaN;
         }
     }
 
