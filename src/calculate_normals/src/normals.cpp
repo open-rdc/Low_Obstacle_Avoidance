@@ -89,7 +89,6 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
         double angle = -1.0*acos(axis_vector.dot(up_vector));
         tf::Quaternion q(right_vector, angle);
         q.normalize();
-       // double deg = angles::to_degrees(angle);
         double rad = q.getAngle();
 
         if(!(1.48 < rad && rad < 1.65))
