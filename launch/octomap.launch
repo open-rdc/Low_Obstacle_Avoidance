@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!--<include file="$(find powerball_peak_start)/launch/powerball.launch" />-->
+
+<!--<include file="$(find powerball_vscom_start)"/launch/poweball.launch" />-->
+
+<!-- Laser Pipeline -->
+<!--<node type="laser_scan_assembler" pkg="laser_assembler" name="my_assembler">
+    <remap from="scan" to="scan2" />
+    <param name="max_scans" type="int" value="400" />
+    <param name="fixed_frame" type="string" value="/map" />
+</node>
+-->
+<!-- Point cloud publisher -->
+<!--<node name="periodic_snapshotter" pkg="laser_assembler" type="periodic_snapshotter" respawn="false" output="screen" />
+
+<node name="range_limit" pkg="range_limit" type="range_limit"/>
+-->
+<!-- Octomap Server -->
+<node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+    <param name="resolusion" value="5.0" />
+
+    <param name="frame_id" type="string" value="/map" />
+    
+    <param name="max_sensor_range" value="15.0" />
+
+    <param name="latch" value="false" />
+    <remap from="cloud_in" to="/hokuyo3d/hokuyo_cloud2" />
+
+</node>
+
+<!-- Rviz -->
+<!-- <node name="rviz" pkg="rviz" type="rviz" respawn="false" output="screen" /> -->
+</launch>

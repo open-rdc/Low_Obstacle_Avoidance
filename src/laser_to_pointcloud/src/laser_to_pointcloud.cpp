@@ -67,7 +67,7 @@ void My_Filter::scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
     pcl::PassThrough<pcl::PointXYZ> pass;
     pass.setInputCloud (pcl_cloud);
     pass.setFilterFieldName ("z");
-    pass.setFilterLimits (0.0, 0.3);
+    pass.setFilterLimits (0.0, 1.0);
     pass.filter (*cloud_filtered);
 
     pcl::toROSMsg (*cloud_filtered, cloud3);
