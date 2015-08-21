@@ -9,6 +9,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/features/normal_3d.h>
@@ -16,6 +17,8 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/conditional_removal.h>
 #include <pcl/filters/radius_outlier_removal.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl_ros/transforms.h>
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h>
@@ -24,26 +27,34 @@
 #include <angles/angles.h>
 #include <limits>
 
-
 ros::Publisher pub;
 ros::Publisher poseArrayPub;
 geometry_msgs::PoseArray poseArray; // particles as PoseArray (preallocated)
+tf::TransformListener *tf_listener;
 
-void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
+void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
 {
-    //sensor_msgs::PointCloud2 cloud1;
-    //sensor_msgs::convertPointCloudToPointCloud2 (cloud_s, cloud1);
+    sensor_msgs::PointCloud2 cloud1;
+    sensor_msgs::convertPointCloudToPointCloud2 (*cloud, cloud1);
 
     sensor_msgs::PointCloud2 output_normals;
     sensor_msgs::PointCloud2 cloud_normals;
     sensor_msgs::PointCloud2 cloud_filtered;
+    sensor_msgs::PointCloud cloud_filtered4;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud0 (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered2 (new pcl::PointCloud<pcl::PointXYZ>);   
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered3 (new pcl::PointCloud<pcl::PointXYZ>);   
     float NaN = std::numeric_limits<float>::quiet_NaN();
 
     // Start making result
 
-    pcl::fromROSMsg (*cloud, *cloud2);
+
+    pcl::fromROSMsg (cloud1, *cloud2);
+
+    tf::Transform transform;
+
+    //pcl_ros::transformPointCloud("/map", *cloud0, *cloud2, *tf_listener);
 /*
     pcl::VoxelGrid<pcl::PointXYZ> sor;
     sor.setInputCloud (cloud2);
@@ -91,7 +102,8 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
         q.normalize();
         double rad = q.getAngle();
 
-        if(!(1.48 < rad && rad < 1.65))
+        //if(!(1.48 < rad && rad < 1.65))
+        if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
         {
         //ROS_INFO("get_angle: %lf\n", rad);
         tf::quaternionTFToMsg(q, msg);
@@ -114,10 +126,18 @@ void normalCallback (const sensor_msgs::PointCloud2ConstPtr& cloud)
     }
 
     poseArrayPub.publish(poseArray);
+ 
+    //Create the filtering object
+    pass.setInputCloud (cloud_filtered2);
+    pass.setFilterFieldName("x");
+    pass.setFilterLimits (0.5, 20.0);
+    pass.filter (*cloud_filtered3);
 
-    pcl::toROSMsg (*cloud_filtered2, cloud_filtered);
+
+    pcl::toROSMsg (*cloud_filtered3, cloud_filtered);
+    sensor_msgs::convertPointCloud2ToPointCloud (cloud_filtered, cloud_filtered4);
     // Publish the data
-    pub.publish (cloud_filtered);
+    pub.publish (cloud_filtered4);
     int j;
     j=poseArray.poses.size();
     ROS_INFO("poseArray size: %d\n", j);
@@ -131,10 +151,11 @@ int main (int argc, char** argv)
 
     ros::Rate loop_rate(2);
     // Create a ROS subscriber for the input point cloud
-    ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 2, normalCallback);
+    ros::Subscriber sub = nh.subscribe ("/hokuyo3d/hokuyo_cloud", 2, normalCallback);
+    //ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 2, normalCallback);
 
     // Create a ROS publisher for the output point cloud
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 2, 1);
+    pub = nh.advertise<sensor_msgs::PointCloud> ("/filtered_cloud", 2, 1);
     poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 2, 1);
 
     // Spin

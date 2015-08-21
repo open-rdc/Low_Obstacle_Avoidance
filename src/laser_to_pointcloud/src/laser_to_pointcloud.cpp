@@ -41,7 +41,7 @@ class My_Filter
 
 My_Filter::My_Filter(){
     scan_sub_ = node_.subscribe<sensor_msgs::LaserScan> ("/scan2", 40, &My_Filter::scanCallback, this);
-    point_cloud_publisher_ = node_.advertise<sensor_msgs::PointCloud2> ("/to_cloud", 40, false);
+    point_cloud_publisher_ = node_.advertise<sensor_msgs::PointCloud2> ("/cloud_pcd", 40, false);
     tfListener_.setExtrapolationLimit(ros::Duration(0.1));
 }
 
@@ -56,12 +56,13 @@ void My_Filter::scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
     }
     sensor_msgs::PointCloud cloud;
     projector_.transformLaserScanToPointCloud("map", *scan_in, cloud, tfListener_);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+   // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+    //pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud (new pcl::PointCloud<pcl::PointXYZ>);
     sensor_msgs::PointCloud2 cloud2;
-    sensor_msgs::PointCloud2 cloud3;
-   // sensor_msgs::PointCloud cloud4;
+  //sensor_msgs::PointCloud2 cloud3;
+  //sensor_msgs::PointCloud cloud4;
     sensor_msgs::convertPointCloudToPointCloud2 (cloud, cloud2);
+    /*
     pcl::fromROSMsg (cloud2, *pcl_cloud);
 
     pcl::PassThrough<pcl::PointXYZ> pass;
@@ -72,7 +73,10 @@ void My_Filter::scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
 
     pcl::toROSMsg (*cloud_filtered, cloud3);
     //sensor_msgs::convertPointCloud2ToPointCloud (cloud3, cloud4);
+    
     point_cloud_publisher_.publish (cloud3);
+    */
+    point_cloud_publisher_.publish (cloud2);
 }
 
 int main (int argc, char** argv)
