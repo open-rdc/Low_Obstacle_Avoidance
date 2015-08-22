@@ -149,14 +149,14 @@ int main (int argc, char** argv)
     ros::init (argc, argv, "normal_filter");
     ros::NodeHandle nh;
 
-    ros::Rate loop_rate(2);
+    ros::Rate loop_rate(3);
     // Create a ROS subscriber for the input point cloud
-    ros::Subscriber sub = nh.subscribe ("/hokuyo3d/hokuyo_cloud", 2, normalCallback);
+    ros::Subscriber sub = nh.subscribe ("/hokuyo3d/hokuyo_cloud", 3, normalCallback);
     //ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 2, normalCallback);
 
     // Create a ROS publisher for the output point cloud
-    pub = nh.advertise<sensor_msgs::PointCloud> ("/filtered_cloud", 2, 1);
-    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 2, 1);
+    pub = nh.advertise<sensor_msgs::PointCloud> ("/filtered_cloud", 3, 1);
+    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 3, 1);
 
     // Spin
     ros::spin();
