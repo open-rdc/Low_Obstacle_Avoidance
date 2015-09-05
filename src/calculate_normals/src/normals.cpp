@@ -32,50 +32,45 @@ ros::Publisher poseArrayPub;
 geometry_msgs::PoseArray poseArray; // particles as PoseArray (preallocated)
 tf::TransformListener *tf_listener;
 
-void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
+void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 {
-    sensor_msgs::PointCloud2 cloud1;
-    sensor_msgs::convertPointCloudToPointCloud2 (*cloud, cloud1);
+    sensor_msgs::PointCloud2 in_cloud2;
+    sensor_msgs::convertPointCloudToPointCloud2 (*in_cloud1, in_cloud2);
+    sensor_msgs::PointCloud2 cloud2_filtered;
+    sensor_msgs::PointCloud cloud1_filtered;
 
-    sensor_msgs::PointCloud2 output_normals;
-    sensor_msgs::PointCloud2 cloud_normals;
-    sensor_msgs::PointCloud2 cloud_filtered;
-    sensor_msgs::PointCloud cloud_filtered4;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud0 (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered2 (new pcl::PointCloud<pcl::PointXYZ>);   
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered3 (new pcl::PointCloud<pcl::PointXYZ>);   
+    pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
+    //pcl::PointCloud<pcl::PointXYZ>::Ptr passthrough_cloud_x (new pcl::PointCloud<pcl::PointXYZ>);   
+
     float NaN = std::numeric_limits<float>::quiet_NaN();
 
-    // Start making result
-
-
-    pcl::fromROSMsg (cloud1, *cloud2);
-
+    pcl::fromROSMsg (in_cloud2, *pcl_cloud);
     tf::Transform transform;
 
     //pcl_ros::transformPointCloud("/map", *cloud0, *cloud2, *tf_listener);
-/*
+
     pcl::VoxelGrid<pcl::PointXYZ> sor;
-    sor.setInputCloud (cloud2);
-    sor.setLeafSize (0.04, 0.04, 0.04);
-    sor.filter (*cloud2);
-*/
+    sor.setInputCloud (pcl_cloud);
+    sor.setLeafSize (0.05, 0.05, 0.05);
+    sor.filter (*voxel_cloud);
+
     poseArray.poses.clear();
     poseArray.header.stamp = ros::Time::now();
-    poseArray.header.frame_id = cloud2->header.frame_id; //EDITED
+    poseArray.header.frame_id = pcl_cloud->header.frame_id; //EDITED
     ROS_INFO_STREAM("poseArray.header: frame=" << poseArray.header.frame_id); //Outputs "/map"
 
     //Create the filtering object
     pcl::PassThrough<pcl::PointXYZ> pass;
-    pass.setInputCloud (cloud2);
+    pass.setInputCloud (voxel_cloud);
     pass.setFilterFieldName("z");
     pass.setFilterLimits (-1.0, 1.0);
-    pass.filter (*cloud_filtered2);
+    pass.filter (*passthrough_cloud);
 
     // estimate normals
     pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
-    ne.setInputCloud(cloud_filtered2);
+    ne.setInputCloud(passthrough_cloud);
     ne.setKSearch (24);
     pcl::PointCloud<pcl::PointNormal>::Ptr normals (new pcl::PointCloud<pcl::PointNormal>);
     ne.compute(*normals);
@@ -83,9 +78,9 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
     /***********************publish normal vectors************************/
     for(size_t i = 0; i<normals->points.size(); ++i)
     {
-        normals->points[i].x = cloud_filtered2->points[i].x;
-        normals->points[i].y = cloud_filtered2->points[i].y;
-        normals->points[i].z = cloud_filtered2->points[i].z;
+        normals->points[i].x = passthrough_cloud->points[i].x;
+        normals->points[i].y = passthrough_cloud->points[i].y;
+        normals->points[i].z = passthrough_cloud->points[i].z;
 
         // Declare goal output pose
         geometry_msgs::PoseStamped pose;
@@ -111,33 +106,33 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& cloud)
         pose.pose.position.x = normals->points[i].x;
         pose.pose.position.y = normals->points[i].y;
         pose.pose.position.z = normals->points[i].z;
-        cloud_filtered2->points[i].x = normals->points[i].x;
-        cloud_filtered2->points[i].y = normals->points[i].y;
-        cloud_filtered2->points[i].z = 0;
+        passthrough_cloud->points[i].x = normals->points[i].x;
+        passthrough_cloud->points[i].y = normals->points[i].y;
+        passthrough_cloud->points[i].z = 0;
 
         pose.pose.orientation = msg;
 
         poseArray.poses.push_back(pose.pose);
         }else{
-            cloud_filtered2->points[i].x = NaN;
-            cloud_filtered2->points[i].y = NaN;
-            cloud_filtered2->points[i].z = NaN;
+            passthrough_cloud->points[i].x = NaN;
+            passthrough_cloud->points[i].y = NaN;
+            passthrough_cloud->points[i].z = NaN;
         }
     }
 
     poseArrayPub.publish(poseArray);
- 
+/* 
     //Create the filtering object
-    pass.setInputCloud (cloud_filtered2);
+    pass.setInputCloud (passthrough_cloud);
     pass.setFilterFieldName("x");
-    pass.setFilterLimits (0.5, 20.0);
-    pass.filter (*cloud_filtered3);
+    pass.setFilterLimits (0.5, 10.0);
+    pass.filter (*passthrough_cloud_x);
+*/
 
-
-    pcl::toROSMsg (*cloud_filtered3, cloud_filtered);
-    sensor_msgs::convertPointCloud2ToPointCloud (cloud_filtered, cloud_filtered4);
+    pcl::toROSMsg (*passthrough_cloud, cloud2_filtered);
+    sensor_msgs::convertPointCloud2ToPointCloud (cloud2_filtered, cloud1_filtered);
     // Publish the data
-    pub.publish (cloud_filtered4);
+    pub.publish (cloud1_filtered);
     int j;
     j=poseArray.poses.size();
     ROS_INFO("poseArray size: %d\n", j);
