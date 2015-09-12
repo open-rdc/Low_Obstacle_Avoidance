@@ -53,7 +53,7 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
     pcl::VoxelGrid<pcl::PointXYZ> sor;
     sor.setInputCloud (pcl_cloud);
-    sor.setLeafSize (0.05, 0.05, 0.05);
+    sor.setLeafSize (0.22, 0.22, 0.22);
     sor.filter (*voxel_cloud);
 
     poseArray.poses.clear();
@@ -97,8 +97,8 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
         q.normalize();
         double rad = q.getAngle();
 
-        //if(!(1.48 < rad && rad < 1.65))
-        if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
+        if(!(1.48 < rad && rad < 1.65))
+        //if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
         {
         //ROS_INFO("get_angle: %lf\n", rad);
         tf::quaternionTFToMsg(q, msg);
