@@ -122,14 +122,13 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     }
 
     poseArrayPub.publish(poseArray);
-/* 
-    //Create the filtering object
-    pass.setInputCloud (passthrough_cloud);
-    pass.setFilterFieldName("x");
-    pass.setFilterLimits (0.5, 10.0);
-    pass.filter (*passthrough_cloud_x);
-*/
-
+    //
+    // //Create the filtering object
+    // pass.setInputCloud (passthrough_cloud);
+    // pass.setFilterFieldName("x");
+    // pass.setFilterLimits (0.5, 10.0);
+    // pass.filter (*passthrough_cloud_x);
+    //
     pcl::toROSMsg (*passthrough_cloud, cloud2_filtered);
     sensor_msgs::convertPointCloud2ToPointCloud (cloud2_filtered, cloud1_filtered);
     // Publish the data
