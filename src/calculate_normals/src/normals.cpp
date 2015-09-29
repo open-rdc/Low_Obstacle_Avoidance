@@ -97,8 +97,9 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
         q.normalize();
         double rad = q.getAngle();
 
-        if(!(1.48 < rad && rad < 1.65))
+        //if(!((1.57-0.0789) < rad && rad < (1.65+0.0789)))
         //if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
+        if(!((1.76-0.0798) < rad && rad < (1.76+0.0798)))
         {
         //ROS_INFO("get_angle: %lf\n", rad);
         tf::quaternionTFToMsg(q, msg);
@@ -108,7 +109,7 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
         pose.pose.position.z = normals->points[i].z;
         passthrough_cloud->points[i].x = normals->points[i].x;
         passthrough_cloud->points[i].y = normals->points[i].y;
-        passthrough_cloud->points[i].z = 0;
+        passthrough_cloud->points[i].z = normals->points[i].z;
 
         pose.pose.orientation = msg;
 
