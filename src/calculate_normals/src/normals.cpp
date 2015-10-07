@@ -37,9 +37,9 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     sensor_msgs::PointCloud2 in_cloud2;
     sensor_msgs::convertPointCloudToPointCloud2 (*in_cloud1, in_cloud2);
     sensor_msgs::PointCloud2 cloud2_filtered;
-    sensor_msgs::PointCloud cloud1_filtered;
+    //sensor_msgs::PointCloud cloud1_filtered;
     sensor_msgs::PointCloud2 obstacle2_filtered;
-    sensor_msgs::PointCloud obstacle1_filtered;
+    //sensor_msgs::PointCloud obstacle1_filtered;
 
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_cloud (new pcl::PointCloud<pcl::PointXYZ>);
@@ -53,7 +53,7 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
     // ros::Time now = ros::Time::now();
     // ros::Time past = now - ros::Duration(1.0);
-    //
+
     poseArray.poses.clear();
     poseArray.header.stamp = ros::Time(0);
     poseArray.header.frame_id = pcl_cloud->header.frame_id; //EDITED
@@ -138,14 +138,14 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     poseArrayPub.publish(poseArray);
 
     pcl::toROSMsg (*passthrough_cloud, cloud2_filtered);
-    sensor_msgs::convertPointCloud2ToPointCloud (cloud2_filtered, cloud1_filtered);    
+    //sensor_msgs::convertPointCloud2ToPointCloud (cloud2_filtered, cloud1_filtered);    
     
     pcl::toROSMsg (*obstacle_cloud, obstacle2_filtered);
-    sensor_msgs::convertPointCloud2ToPointCloud (obstacle2_filtered, obstacle1_filtered);
+    //sensor_msgs::convertPointCloud2ToPointCloud (obstacle2_filtered, obstacle1_filtered);
  
     // Publish the data
-    pub.publish (cloud1_filtered);
-    pub2.publish (obstacle1_filtered);
+    pub.publish (cloud2_filtered);
+    pub2.publish (obstacle2_filtered);
     int j;
     j=poseArray.poses.size();
     ROS_INFO("poseArray size: %d\n", j);
@@ -163,8 +163,8 @@ int main (int argc, char** argv)
     //ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 2, normalCallback);
 
     // Create a ROS publisher for the output point cloud
-    pub = nh.advertise<sensor_msgs::PointCloud> ("/filtered_cloud", 1000, 1);
-    pub2 = nh.advertise<sensor_msgs::PointCloud> ("/obstacle_cloud", 1000, 1);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 1000, 1);
+    pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/obstacle_cloud", 1000, 1);
     poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 1000, 1);
 
     // Spin
