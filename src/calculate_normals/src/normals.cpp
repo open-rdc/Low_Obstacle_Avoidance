@@ -26,6 +26,7 @@
 #include <vector>
 #include <angles/angles.h>
 #include <limits>
+#include <laser_assembler/AssembleScans.h>
 
 ros::Publisher pub;
 ros::Publisher pub2;
@@ -35,6 +36,7 @@ geometry_msgs::PoseArray poseArray; // particles as PoseArray (preallocated)
 void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 {
     sensor_msgs::PointCloud2 in_cloud2;
+    // in_cloud2.fields[3].name = "intensity";
     sensor_msgs::convertPointCloudToPointCloud2 (*in_cloud1, in_cloud2);
     sensor_msgs::PointCloud2 cloud2_filtered;
     //sensor_msgs::PointCloud cloud1_filtered;
@@ -102,9 +104,9 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
         q.normalize();
         double rad = q.getAngle();
 
-        if(!((1.57-0.0789) < rad && rad < (1.65+0.0789)))
+        //if(!((1.57-0.0789) < rad && rad < (1.65+0.0789)))
         //if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
-        //if(!((1.76-0.0798) < rad && rad < (1.76+0.0798)))
+        if(!((1.76-0.0798) < rad && rad < (1.76+0.0798)))
         {
         //ROS_INFO("get_angle: %lf\n", rad);
         tf::quaternionTFToMsg(q, msg);
