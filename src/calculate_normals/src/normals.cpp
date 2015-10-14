@@ -17,6 +17,7 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/conditional_removal.h>
 #include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 
@@ -46,8 +47,13 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_cloud (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr z_passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
     pcl::PointCloud<pcl::PointXYZ>::Ptr passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
-    pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_cloud(new pcl::PointCloud<pcl::PointXYZ>);   
+    pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_cloud (new pcl::PointCloud<pcl::PointXYZ>);    
+    pcl::PointCloud<pcl::PointXYZ>::Ptr sor_passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
+    pcl::PointCloud<pcl::PointXYZ>::Ptr sor_obstacle_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
+
+
 
     float NaN = std::numeric_limits<float>::quiet_NaN();
 
@@ -67,16 +73,23 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     sor.filter (*voxel_cloud);
 
     //Create the filtering object
+    pcl::PassThrough<pcl::PointXYZ> z_pass;
+    z_pass.setInputCloud (voxel_cloud);
+    z_pass.setFilterFieldName("z");
+    z_pass.setFilterLimits (-1.0, 1.0);
+    z_pass.filter (*z_passthrough_cloud);
+    
     pcl::PassThrough<pcl::PointXYZ> pass;
-    pass.setInputCloud (voxel_cloud);
-    pass.setFilterFieldName("z");
-    pass.setFilterLimits (-1.0, 1.0);
+    pass.setInputCloud (z_passthrough_cloud);
+    pass.setFilterFieldName("x");
+    pass.setFilterLimits (0, 10.0);
     pass.filter (*passthrough_cloud);
+
 
     // estimate normals
     pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
     ne.setInputCloud(passthrough_cloud);
-    ne.setKSearch (8);
+    ne.setKSearch (24);
     pcl::PointCloud<pcl::PointNormal>::Ptr normals (new pcl::PointCloud<pcl::PointNormal>);
     ne.compute(*normals);
 
@@ -106,7 +119,8 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
         //if(!((1.57-0.0789) < rad && rad < (1.65+0.0789)))
         //if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
-        if(!((1.76-0.0798) < rad && rad < (1.76+0.0798)))
+        //if(!((1.76-0.0798) < rad && rad < (1.76+0.0798)))
+        if(!((1.76-0.392) < rad && rad < (1.76+0.392)))
         {
         //ROS_INFO("get_angle: %lf\n", rad);
         tf::quaternionTFToMsg(q, msg);
@@ -139,10 +153,22 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
     poseArrayPub.publish(poseArray);
 
-    pcl::toROSMsg (*passthrough_cloud, cloud2_filtered);
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor2;
+    sor2.setInputCloud(passthrough_cloud);
+    sor2.setMeanK(50);
+    sor2.setStddevMulThresh(1.0);
+    sor2.filter(*sor_passthrough_cloud); 
+    
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor3;
+    sor3.setInputCloud(obstacle_cloud);
+    sor3.setMeanK(50);
+    sor3.setStddevMulThresh(1.0);
+    sor3.filter(*sor_obstacle_cloud);
+
+    pcl::toROSMsg (*sor_passthrough_cloud, cloud2_filtered);
     //sensor_msgs::convertPointCloud2ToPointCloud (cloud2_filtered, cloud1_filtered);    
     
-    pcl::toROSMsg (*obstacle_cloud, obstacle2_filtered);
+    pcl::toROSMsg (*sor_obstacle_cloud, obstacle2_filtered);
     //sensor_msgs::convertPointCloud2ToPointCloud (obstacle2_filtered, obstacle1_filtered);
  
     // Publish the data
@@ -165,7 +191,7 @@ int main (int argc, char** argv)
     //ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 2, normalCallback);
 
     // Create a ROS publisher for the output point cloud
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 1000, 1);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 2000, 1);
     pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/obstacle_cloud", 1000, 1);
     poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 1000, 1);
 
