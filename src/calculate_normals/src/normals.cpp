@@ -116,32 +116,27 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
         tf::Quaternion q(right_vector, angle);
         q.normalize();
         double rad = q.getAngle();
+        
+        tf::quaternionTFToMsg(q, msg);
+        pose.pose.position.x = normals->points[i].x;
+        pose.pose.position.y = normals->points[i].y;
+        pose.pose.position.z = normals->points[i].z;
+        pose.pose.orientation = msg;
+        poseArray.poses.push_back(pose.pose);
 
         //if(!((1.57-0.0789) < rad && rad < (1.65+0.0789)))
         //if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
         //if(!((1.76-0.0798) < rad && rad < (1.76+0.0798)))
         if(!((1.76-0.392) < rad && rad < (1.76+0.392)))
         {
-        //ROS_INFO("get_angle: %lf\n", rad);
-        tf::quaternionTFToMsg(q, msg);
-
-        pose.pose.position.x = normals->points[i].x;
-        pose.pose.position.y = normals->points[i].y;
-        pose.pose.position.z = normals->points[i].z;
-        passthrough_cloud->points[i].x = NaN;
-        passthrough_cloud->points[i].y = NaN;
-        passthrough_cloud->points[i].z = NaN;
-        obstacle_cloud->points[i].x = normals->points[i].x;
-        obstacle_cloud->points[i].y = normals->points[i].y;
-        obstacle_cloud->points[i].z = normals->points[i].z;
-
-        pose.pose.orientation = msg;
-
-        poseArray.poses.push_back(pose.pose);
+            //ROS_INFO("get_angle: %lf\n", rad);
+            passthrough_cloud->points[i].x = NaN;
+            passthrough_cloud->points[i].y = NaN;
+            passthrough_cloud->points[i].z = NaN;
+            obstacle_cloud->points[i].x = normals->points[i].x;
+            obstacle_cloud->points[i].y = normals->points[i].y;
+            obstacle_cloud->points[i].z = normals->points[i].z;
         }else{
-            // passthrough_cloud->points[i].x = NaN;
-            // passthrough_cloud->points[i].y = NaN;
-            // passthrough_cloud->points[i].z = NaN;
             passthrough_cloud->points[i].x = normals->points[i].x;
             passthrough_cloud->points[i].y = normals->points[i].y;
             passthrough_cloud->points[i].z = normals->points[i].z;
