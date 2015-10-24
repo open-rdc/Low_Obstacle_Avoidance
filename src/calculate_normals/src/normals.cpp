@@ -43,7 +43,7 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
   pcl::PointCloud<pcl::PointXYZ>::Ptr y_passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
   pcl::PointCloud<pcl::PointXYZ>::Ptr passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
   pcl::PointCloud<pcl::PointXYZ>::Ptr sor_passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
-  pcl::PointCloud<pcl::PointXYZ>::Ptr outlier_removal_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
+  pcl::PointCloud<pcl::PointXYZ>::Ptr ror_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
 
   float NaN = std::numeric_limits<float>::quiet_NaN();
 
@@ -80,15 +80,15 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
   sor.setStddevMulThresh(1.0);
   sor.filter(*sor_passthrough_cloud); 
   
-  //voxel_grid
-  pcl::VoxelGrid<pcl::PointXYZ> vg;
-  vg.setInputCloud (sor_passthrough_cloud);
-  vg.setLeafSize (0.10, 0.10, 0.10);
-  vg.filter (*voxel_cloud);
+  // //voxel_grid
+  // pcl::VoxelGrid<pcl::PointXYZ> vg;
+  // vg.setInputCloud (sor_passthrough_cloud);
+  // vg.setLeafSize (0.05, 0.05, 0.05);
+  // vg.filter (*voxel_cloud);
 
   // estimate normals
   pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
-  ne.setInputCloud(voxel_cloud);
+  ne.setInputCloud(sor_passthrough_cloud);
   ne.setKSearch (8);
   pcl::PointCloud<pcl::PointNormal>::Ptr normals (new pcl::PointCloud<pcl::PointNormal>);
   ne.compute(*normals);
@@ -96,9 +96,9 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
   //publish normal vectors
   for(size_t i = 0; i<normals->points.size(); ++i)
   {
-    normals->points[i].x = voxel_cloud->points[i].x;
-    normals->points[i].y = voxel_cloud->points[i].y;
-    normals->points[i].z = voxel_cloud->points[i].z;
+    normals->points[i].x = sor_passthrough_cloud->points[i].x;
+    normals->points[i].y = sor_passthrough_cloud->points[i].y;
+    normals->points[i].z = sor_passthrough_cloud->points[i].z;
 
     geometry_msgs::PoseStamped pose;
     geometry_msgs::Quaternion msg;
@@ -127,26 +127,31 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
       //if(!((1.76-0.392) < rad && rad < (1.76+0.392)))
     {
       //ROS_INFO("get_angle: %lf\n", rad);
-      voxel_cloud->points[i].x = NaN;
-      voxel_cloud->points[i].y = NaN;
-      voxel_cloud->points[i].z = NaN;
+      sor_passthrough_cloud->points[i].x = NaN;
+      sor_passthrough_cloud->points[i].y = NaN;
+      sor_passthrough_cloud->points[i].z = NaN;
     }else{
-      voxel_cloud->points[i].x = normals->points[i].x;
-      voxel_cloud->points[i].y = normals->points[i].y;
-      voxel_cloud->points[i].z = normals->points[i].z;
+      sor_passthrough_cloud->points[i].x = normals->points[i].x;
+      sor_passthrough_cloud->points[i].y = normals->points[i].y;
+      sor_passthrough_cloud->points[i].z = normals->points[i].z;
     }
   }
   
-  //outlier removal
-  pcl::StatisticalOutlierRemoval<pcl::PointXYZ> out;
-  out.setInputCloud(voxel_cloud);
-  out.setMeanK(24);
-  out.setStddevMulThresh(0.5);
-  out.filter(*outlier_removal_cloud); 
+    //voxel_grid
+  pcl::VoxelGrid<pcl::PointXYZ> vg;
+  vg.setInputCloud (sor_passthrough_cloud);
+  vg.setLeafSize (0.05, 0.05, 0.05);
+  vg.filter (*voxel_cloud);
+
+  pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
+  outrem.setInputCloud (voxel_cloud);
+  outrem.setRadiusSearch (0.5);
+  outrem.setMinNeighborsInRadius (24);
+  outrem.filter (*ror_cloud);
 
   poseArrayPub.publish(poseArray);
 
-  pcl::toROSMsg (*outlier_removal_cloud, cloud2_filtered);
+  pcl::toROSMsg (*ror_cloud, cloud2_filtered);
 
   // Publish the data
   pub.publish (cloud2_filtered);
