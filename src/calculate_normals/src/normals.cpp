@@ -47,8 +47,9 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
   tf::Matrix3x3 mat = transform1.getBasis();
   double roll, pitch, yaw;
   mat.getRPY(roll, pitch, yaw);
-  double thresholdM = 1.57 - pitch - 0.392;
-  double thresholdP = 1.57 + pitch + 0.392;
+  double threshold = 0.392;
+  double thresholdM = 1.57 - pitch - threshold;
+  double thresholdP = 1.57 + pitch + threshold;
 
   sensor_msgs::PointCloud2 in_cloud2;
   sensor_msgs::convertPointCloudToPointCloud2 (*in_cloud1, in_cloud2);
