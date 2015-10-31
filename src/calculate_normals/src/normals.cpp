@@ -1,6 +1,5 @@
 #include <ros/ros.h>
 #include <iostream>
-// PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/point_cloud_conversion.h>
@@ -23,7 +22,6 @@
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h>
-//#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <vector>
 #include <angles/angles.h>
 #include <limits>
@@ -36,160 +34,164 @@ geometry_msgs::PoseArray poseArray; // particles as PoseArray (preallocated)
 
 void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 {
-    sensor_msgs::PointCloud2 in_cloud2;
-    // in_cloud2.fields[3].name = "intensity";
-    sensor_msgs::convertPointCloudToPointCloud2 (*in_cloud1, in_cloud2);
-    sensor_msgs::PointCloud2 cloud2_filtered;
-    //sensor_msgs::PointCloud cloud1_filtered;
-    sensor_msgs::PointCloud2 obstacle2_filtered;
-    //sensor_msgs::PointCloud obstacle1_filtered;
+  sensor_msgs::PointCloud d_cloud = *in_cloud1;
+  sensor_msgs::PointCloud base_cloud;
+  tf::TransformListener listener;
+  tf::StampedTransform transform1;
+  try{
+    listener.waitForTransform("/base_link", d_cloud.header.frame_id, ros::Time(0), ros::Duration(1.0));
+    //listener.lookupTransform("/base_link", "/hokuyo3d", ros::Time(0), transform1);
+    listener.transformPointCloud("/base_link", base_cloud.header.stamp, d_cloud, d_cloud.header.frame_id, base_cloud);
+  }catch(tf::TransformException &ex){
+    ROS_ERROR("%s", ex.what());
+    ros::Duration(1.0).sleep();
+  }
 
+  double threshold = 0.392;
+  double thresholdM = 1.57  - threshold;
+  double thresholdP = 1.57  + threshold;
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_cloud (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr z_passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
-    pcl::PointCloud<pcl::PointXYZ>::Ptr passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
-    pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_cloud (new pcl::PointCloud<pcl::PointXYZ>);    
-    pcl::PointCloud<pcl::PointXYZ>::Ptr sor_passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
-    pcl::PointCloud<pcl::PointXYZ>::Ptr sor_obstacle_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
+  sensor_msgs::PointCloud2 in_cloud2;
+  sensor_msgs::convertPointCloudToPointCloud2 (base_cloud, in_cloud2);
+  sensor_msgs::PointCloud2 cloud2_filtered;
+  // sensor_msgs::PointCloud2 obstacle;
 
+  pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr z_passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
+  pcl::PointCloud<pcl::PointXYZ>::Ptr z_passthrough_cloud2 (new pcl::PointCloud<pcl::PointXYZ>);   
+  pcl::PointCloud<pcl::PointXYZ>::Ptr y_passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
+  pcl::PointCloud<pcl::PointXYZ>::Ptr passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
+  pcl::PointCloud<pcl::PointXYZ>::Ptr sor_passthrough_cloud (new pcl::PointCloud<pcl::PointXYZ>);   
+  float NaN = std::numeric_limits<float>::quiet_NaN();
 
+  pcl::fromROSMsg (in_cloud2, *pcl_cloud);
 
-    float NaN = std::numeric_limits<float>::quiet_NaN();
+  poseArray.poses.clear();
+  poseArray.header.stamp = ros::Time(0);
+  poseArray.header.frame_id = pcl_cloud->header.frame_id; //EDITED
+  ROS_INFO_STREAM("poseArray.header: frame=" << poseArray.header.frame_id);
 
-    pcl::fromROSMsg (in_cloud2, *pcl_cloud);
+  //passthrough
+  pcl::PassThrough<pcl::PointXYZ> z_pass;
+  z_pass.setInputCloud (pcl_cloud);
+  z_pass.setFilterFieldName("z");
+  z_pass.setFilterLimits (-1.0, 1.0);
+  z_pass.filter (*z_passthrough_cloud);
 
-    // ros::Time now = ros::Time::now();
-    // ros::Time past = now - ros::Duration(1.0);
+  pcl::PassThrough<pcl::PointXYZ> y_pass;
+  y_pass.setInputCloud (z_passthrough_cloud);
+  y_pass.setFilterFieldName("y");
+  y_pass.setFilterLimits (-10.0, 10.0);
+  y_pass.filter (*y_passthrough_cloud);
 
-    poseArray.poses.clear();
-    poseArray.header.stamp = ros::Time(0);
-    poseArray.header.frame_id = pcl_cloud->header.frame_id; //EDITED
-    ROS_INFO_STREAM("poseArray.header: frame=" << poseArray.header.frame_id); //Outputs "/map"
+  pcl::PassThrough<pcl::PointXYZ> x_pass;
+  x_pass.setInputCloud (y_passthrough_cloud);
+  x_pass.setFilterFieldName("x");
+  x_pass.setFilterLimits (-0.1, 10.0);
+  x_pass.filter (*passthrough_cloud);
+
+  //outlier removal
+  pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+  sor.setInputCloud(passthrough_cloud);
+  sor.setMeanK(50);
+  sor.setStddevMulThresh(1.0);
+  sor.filter(*sor_passthrough_cloud); 
+
+  //voxel_grid
+  pcl::VoxelGrid<pcl::PointXYZ> vg;
+  vg.setInputCloud (sor_passthrough_cloud);
+  vg.setLeafSize (0.05, 0.05, 0.05);
+  vg.filter (*voxel_cloud);
+
+  // estimate normals
+  pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
+  ne.setInputCloud(voxel_cloud);
+  ne.setKSearch (24);
+  pcl::PointCloud<pcl::PointNormal>::Ptr normals (new pcl::PointCloud<pcl::PointNormal>);
+  ne.compute(*normals);
+
+  //publish normal vectors
+  for(size_t i = 0; i<normals->points.size(); ++i)
+  {
+    normals->points[i].x = voxel_cloud->points[i].x;
+    normals->points[i].y = voxel_cloud->points[i].y;
+    normals->points[i].z = voxel_cloud->points[i].z;
+
+    geometry_msgs::PoseStamped pose;
+    geometry_msgs::Quaternion msg;
+
+    tf::Vector3 axis_vector(normals->points[i].normal[0], normals->points[i].normal[1], normals->points[i].normal[2]);
+    tf::Vector3 up_vector(1.0, 0.0, 0.0);
+
+    //cross(外積)　dot(内積) normalize(正規化)
+    tf::Vector3 right_vector = axis_vector.cross(up_vector);
+    right_vector.normalized();
+    tf::Quaternion q(right_vector, -1.0*acos(axis_vector.dot(up_vector)));
+    q.normalize();
+
+    tf::Matrix3x3 mat(q);
+    double roll, pitch, yaw;
+    mat.getRPY(roll, pitch, yaw);
     
-    pcl::VoxelGrid<pcl::PointXYZ> sor;
-    sor.setInputCloud (pcl_cloud);
-    sor.setLeafSize (0.22, 0.22, 0.22);
-    sor.filter (*voxel_cloud);
+    tf::quaternionTFToMsg(q, msg);
+    pose.pose.position.x = normals->points[i].x;
+    pose.pose.position.y = normals->points[i].y;
+    pose.pose.position.z = normals->points[i].z;
+    pose.pose.orientation = msg;
+    poseArray.poses.push_back(pose.pose);
 
-    //Create the filtering object
-    pcl::PassThrough<pcl::PointXYZ> z_pass;
-    z_pass.setInputCloud (voxel_cloud);
-    z_pass.setFilterFieldName("z");
-    z_pass.setFilterLimits (-1.0, 1.0);
-    z_pass.filter (*z_passthrough_cloud);
-    
-    pcl::PassThrough<pcl::PointXYZ> pass;
-    pass.setInputCloud (z_passthrough_cloud);
-    pass.setFilterFieldName("x");
-    pass.setFilterLimits (0, 10.0);
-    pass.filter (*passthrough_cloud);
-
-
-    // estimate normals
-    pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
-    ne.setInputCloud(passthrough_cloud);
-    ne.setKSearch (24);
-    pcl::PointCloud<pcl::PointNormal>::Ptr normals (new pcl::PointCloud<pcl::PointNormal>);
-    ne.compute(*normals);
-
-    copyPointCloud(*passthrough_cloud, *obstacle_cloud);
-
-    /***********************publish normal vectors************************/
-    for(size_t i = 0; i<normals->points.size(); ++i)
+    //if(!((1.57-0.0789) < rad && rad < (1.65+0.0789)))
+    //if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
+    //if(!((1.76-0.0798) < rad && rad < (1.76+0.0798)))
+    //if(!((1.76-0.392) < rad && rad < (1.76+0.392)))
+    if(!((thresholdM) < pitch && pitch < (thresholdP)))
     {
-        normals->points[i].x = passthrough_cloud->points[i].x;
-        normals->points[i].y = passthrough_cloud->points[i].y;
-        normals->points[i].z = passthrough_cloud->points[i].z;
-
-        // Declare goal output pose
-        geometry_msgs::PoseStamped pose;
-        geometry_msgs::Quaternion msg;
-
-        tf::Vector3 axis_vector(normals->points[i].normal[0], normals->points[i].normal[1], normals->points[i].normal[2]);
-        tf::Vector3 up_vector(1.0, 0.0, 0.0);
-                  
-        //cross(外積)　dot(内積) normalize(正規化)
-        tf::Vector3 right_vector = axis_vector.cross(up_vector);
-        right_vector.normalized();
-        double angle = -1.0*acos(axis_vector.dot(up_vector));
-        tf::Quaternion q(right_vector, angle);
-        q.normalize();
-        double rad = q.getAngle();
-        
-        tf::quaternionTFToMsg(q, msg);
-        pose.pose.position.x = normals->points[i].x;
-        pose.pose.position.y = normals->points[i].y;
-        pose.pose.position.z = normals->points[i].z;
-        pose.pose.orientation = msg;
-        poseArray.poses.push_back(pose.pose);
-
-        //if(!((1.57-0.0789) < rad && rad < (1.65+0.0789)))
-        //if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
-        //if(!((1.76-0.0798) < rad && rad < (1.76+0.0798)))
-        if(!((1.76-0.392) < rad && rad < (1.76+0.392)))
-        {
-            //ROS_INFO("get_angle: %lf\n", rad);
-            passthrough_cloud->points[i].x = NaN;
-            passthrough_cloud->points[i].y = NaN;
-            passthrough_cloud->points[i].z = NaN;
-            obstacle_cloud->points[i].x = normals->points[i].x;
-            obstacle_cloud->points[i].y = normals->points[i].y;
-            obstacle_cloud->points[i].z = normals->points[i].z;
-        }else{
-            passthrough_cloud->points[i].x = normals->points[i].x;
-            passthrough_cloud->points[i].y = normals->points[i].y;
-            passthrough_cloud->points[i].z = normals->points[i].z;
-            obstacle_cloud->points[i].x = NaN;
-            obstacle_cloud->points[i].y = NaN;
-            obstacle_cloud->points[i].z = NaN;
-        }
+      //ROS_INFO("get_angle: %lf\n", rad);
+      voxel_cloud->points[i].x = NaN;
+      voxel_cloud->points[i].y = NaN;
+      voxel_cloud->points[i].z = NaN;
+    }else{
+      voxel_cloud->points[i].x = normals->points[i].x;
+      voxel_cloud->points[i].y = normals->points[i].y;
+      voxel_cloud->points[i].z = normals->points[i].z;
     }
+  }
+  // std::vector<int> indices;
+  // pcl::removeNaNFromPointCloud( *obstacle_cloud, *obstacle_cloud, indices);
+  pcl::PassThrough<pcl::PointXYZ> z_pass2;
+  z_pass2.setInputCloud (voxel_cloud);
+  z_pass2.setFilterFieldName("z");
+  z_pass2.setFilterLimits (-1.0, 0.0);
+  z_pass2.filter (*z_passthrough_cloud2);
 
-    poseArrayPub.publish(poseArray);
+  poseArrayPub.publish(poseArray);
 
-    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor2;
-    sor2.setInputCloud(passthrough_cloud);
-    sor2.setMeanK(50);
-    sor2.setStddevMulThresh(1.0);
-    sor2.filter(*sor_passthrough_cloud); 
-    
-    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor3;
-    sor3.setInputCloud(obstacle_cloud);
-    sor3.setMeanK(50);
-    sor3.setStddevMulThresh(1.0);
-    sor3.filter(*sor_obstacle_cloud);
+  pcl::toROSMsg (*z_passthrough_cloud2, cloud2_filtered);
 
-    pcl::toROSMsg (*sor_passthrough_cloud, cloud2_filtered);
-    //sensor_msgs::convertPointCloud2ToPointCloud (cloud2_filtered, cloud1_filtered);    
-    
-    pcl::toROSMsg (*sor_obstacle_cloud, obstacle2_filtered);
-    //sensor_msgs::convertPointCloud2ToPointCloud (obstacle2_filtered, obstacle1_filtered);
- 
-    // Publish the data
-    pub.publish (cloud2_filtered);
-    pub2.publish (obstacle2_filtered);
-    int j;
-    j=poseArray.poses.size();
-    ROS_INFO("poseArray size: %d\n", j);
+  // Publish the data
+  pub.publish (cloud2_filtered);
+
+  int j;
+  j=poseArray.poses.size();
+  ROS_INFO("poseArray size: %d\n", j);
 }
 
 int main (int argc, char** argv)
 {
-    // Initialize ROS
-    ros::init (argc, argv, "normal_filter");
-    ros::NodeHandle nh;
+  // Initialize ROS
+  ros::init (argc, argv, "normal_filter");
+  ros::NodeHandle nh;
 
-    ros::Rate loop_rate(0.5);
-    // Create a ROS subscriber for the input point cloud
-    ros::Subscriber sub = nh.subscribe ("/hokuyo3d/hokuyo_cloud", 1, normalCallback);
-    //ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 2, normalCallback);
+  ros::Rate loop_rate(5.0);
+  // Create a ROS subscriber for the input point cloud
+  ros::Subscriber sub = nh.subscribe ("/hokuyo3d/hokuyo_cloud", 1, normalCallback);
+  //ros::Subscriber sub = nh.subscribe ("/cloud_pcd", 2, normalCallback);
 
-    // Create a ROS publisher for the output point cloud
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 2000, 1);
-    pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/obstacle_cloud", 1000, 1);
-    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 1000, 1);
+  // Create a ROS publisher for the output point cloud
+  pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 5000, 1);
+  poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 5000, 1);
 
-    // Spin
-    ros::spin();
+  // Spin
+  ros::spin();
 }
