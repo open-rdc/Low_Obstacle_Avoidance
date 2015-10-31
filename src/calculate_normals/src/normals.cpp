@@ -39,9 +39,9 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
   tf::TransformListener listener;
   tf::StampedTransform transform1;
   try{
-    listener.waitForTransform("/base_link", "/hokuyo3d", ros::Time(0), ros::Duration(1.0));
+    listener.waitForTransform("/base_link", d_cloud.header.frame_id, ros::Time(0), ros::Duration(1.0));
     //listener.lookupTransform("/base_link", "/hokuyo3d", ros::Time(0), transform1);
-    listener.transformPointCloud("/base_link", base_cloud.header.stamp, d_cloud, "/hokuyo3d", base_cloud);
+    listener.transformPointCloud("/base_link", base_cloud.header.stamp, d_cloud, d_cloud.header.frame_id, base_cloud);
   }catch(tf::TransformException &ex){
     ROS_ERROR("%s", ex.what());
     ros::Duration(1.0).sleep();
@@ -162,7 +162,7 @@ void normalCallback (const sensor_msgs::PointCloudConstPtr& in_cloud1)
   pcl::PassThrough<pcl::PointXYZ> z_pass2;
   z_pass2.setInputCloud (voxel_cloud);
   z_pass2.setFilterFieldName("z");
-  z_pass2.setFilterLimits (-1.0, 0.1);
+  z_pass2.setFilterLimits (-1.0, 0.0);
   z_pass2.filter (*z_passthrough_cloud2);
 
   poseArrayPub.publish(poseArray);
