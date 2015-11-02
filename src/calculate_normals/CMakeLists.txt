@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
     pcl_ros
     roscpp
     sensor_msgs
+    laser_geometry
+    tf
     )
 find_package(cmake_modules REQUIRED)
 
