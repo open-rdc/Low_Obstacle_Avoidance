@@ -29,7 +29,7 @@
 #include <angles/angles.h>
 #include <limits>
 #include <laser_assembler/AssembleScans.h>
-#define allowable_error 0.1
+#define allowable_error 0.5
 
 ros::Publisher pub;
 ros::Publisher pub2;
@@ -43,11 +43,11 @@ public:
   Calculate_Normal(){
     point_cloud_sub = nh.subscribe("/hokuyo3d/hokuyo_cloud", 1, &Calculate_Normal::normalCallBack, this);
     scan_sub = nh.subscribe("/scan", 1, &Calculate_Normal::scanCallBack, this);
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 3000, 1);
-    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 3000, 1);
-    low_obstacle_pub = nh.advertise<sensor_msgs::PointCloud2> ("/low_obstacle_cloud", 3000, 1);
-    pub2 = nh.advertise<sensor_msgs::PointCloud> ("/obstacle_cloud", 500, 1);
-    ros::Rate loop_rate(5);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 4000, 1);
+    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 5000, 1);
+    low_obstacle_pub = nh.advertise<sensor_msgs::PointCloud2> ("/low_obstacle_cloud", 600, 1);
+    pub2 = nh.advertise<sensor_msgs::PointCloud> ("/obstacle_cloud", 600, 1);
+    ros::Rate loop_rate(30);
   }
 
 private:
@@ -85,7 +85,6 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
   pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_passthrough(new pcl::PointCloud<pcl::PointXYZ>);   
   pcl::PointCloud<pcl::PointNormal>::Ptr normals(new pcl::PointCloud<pcl::PointNormal>);
 
-  obstacle.points.clear();
   d_cloud = *in_cloud1;
   try{
     listener.waitForTransform("/base_link", d_cloud.header.frame_id, ros::Time(0), ros::Duration(10.0));
@@ -121,19 +120,19 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
   pcl::PassThrough<pcl::PointXYZ> x_pass;
   x_pass.setInputCloud (y_passthrough_cloud);
   x_pass.setFilterFieldName("x");
-  x_pass.setFilterLimits (-0.1, 10.0);
+  x_pass.setFilterLimits (0.0, 10.0);
   x_pass.filter (*passthrough_cloud);
-
-  //outlier removal
-  pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-  sor.setInputCloud(passthrough_cloud);
-  sor.setMeanK(50);
-  sor.setStddevMulThresh(1.0);
-  sor.filter(*sor_passthrough_cloud); 
+  //
+  // //outlier removal
+  // pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+  // sor.setInputCloud(passthrough_cloud);
+  // sor.setMeanK(50);
+  // sor.setStddevMulThresh(1.0);
+  // sor.filter(*sor_passthrough_cloud); 
 
   //voxel_grid
   pcl::VoxelGrid<pcl::PointXYZ> vg;
-  vg.setInputCloud (sor_passthrough_cloud);
+  vg.setInputCloud (passthrough_cloud);
   vg.setLeafSize (0.05, 0.05, 0.05);
   vg.filter (*voxel_cloud);
 
@@ -194,7 +193,7 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
       voxel_cloud->points[i].z = NaN;
       obstacle_cloud->points[i].x = normals->points[i].x;
       obstacle_cloud->points[i].y = normals->points[i].y;
-      obstacle_cloud->points[i].z = 0.2;
+      obstacle_cloud->points[i].z = 0.0;
     }else{
       voxel_cloud->points[i].x = normals->points[i].x;
       voxel_cloud->points[i].y = normals->points[i].y;
@@ -269,9 +268,11 @@ void scanCallBack(const sensor_msgs::LaserScan::ConstPtr& scan){
   geometry_msgs::TransformStamped base_trans;
   base_trans.header.frame_id = "/base_link";
   base_trans.header.stamp = current_time;
+  ros::Time past_time;
+  past_time = obstacle.header.stamp;
   try{
-    scan_listener.waitForTransform("/base_link", d_scan_cloud.header.frame_id, base_trans.header.stamp + ros::Duration().fromSec(scan->ranges.size() * scan->time_increment), ros::Duration(1.0));
-    scan_listener.transformPointCloud("/base_link", scan_cloud.header.stamp, d_scan_cloud, d_scan_cloud.header.frame_id, scan_cloud);
+    scan_listener.waitForTransform("/base_link", d_scan_cloud.header.frame_id, d_scan_cloud.header.stamp, ros::Duration(1.0));
+    scan_listener.transformPointCloud("/base_link", past_time, d_scan_cloud, d_scan_cloud.header.frame_id, scan_cloud);
   }catch(tf::TransformException &ex){
     ROS_ERROR("%s", ex.what());
     ros::Duration(1.0).sleep();
@@ -289,7 +290,7 @@ void scanCallBack(const sensor_msgs::LaserScan::ConstPtr& scan){
   pcl::PassThrough<pcl::PointXYZ> x_pass_scan;
   x_pass_scan.setInputCloud (y_passthrough_scan_cloud);
   x_pass_scan.setFilterFieldName("x");
-  x_pass_scan.setFilterLimits (-0.1, 10.0);
+  x_pass_scan.setFilterLimits (0.0, 10.0);
   x_pass_scan.filter (*x_passthrough_scan_cloud);
   
   pcl::VoxelGrid<pcl::PointXYZ> vogl;
@@ -345,7 +346,7 @@ void scanCallBack(const sensor_msgs::LaserScan::ConstPtr& scan){
   pcl::RadiusOutlierRemoval<pcl::PointXYZ> ror;
   ror.setInputCloud(pcl_low_obstacle);
   ror.setRadiusSearch(0.5);
-  ror.setMinNeighborsInRadius(8);
+  ror.setMinNeighborsInRadius(50);
   ror.filter(*pcl_low_obstacle_filtered);
 
   pcl::toROSMsg(*pcl_low_obstacle_filtered, low_obstacle_filtered);
