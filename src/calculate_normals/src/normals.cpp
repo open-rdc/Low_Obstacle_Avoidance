@@ -47,6 +47,7 @@ public:
     poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 5000, 1);
     low_obstacle_pub = nh.advertise<sensor_msgs::PointCloud2> ("/low_obstacle_cloud", 600, 1);
     pub2 = nh.advertise<sensor_msgs::PointCloud> ("/obstacle_cloud", 600, 1);
+    pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/jsk_cloud", 1000);
     ros::Rate loop_rate(30);
   }
 
@@ -56,6 +57,7 @@ private:
   ros::Subscriber scan_sub;
   ros::Publisher pub;
   ros::Publisher pub2;
+  ros::Publisher pub3;
   ros::Publisher poseArrayPub;
   ros::Publisher low_obstacle_pub;
   sensor_msgs::PointCloud d_cloud;
@@ -69,6 +71,7 @@ private:
   sensor_msgs::PointCloud passthrough_scan_cloud;
   sensor_msgs::PointCloud2 passthrough_scan_cloud2;
   sensor_msgs::PointCloud2 scan_cloud2;
+  sensor_msgs::PointCloud2 jsk_cloud;
   tf::TransformListener listener;
   tf::TransformListener scan_listener;
 
@@ -141,7 +144,7 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
   ne.setInputCloud(voxel_cloud);
   ne.setKSearch (24);
   ne.compute(*normals);
-
+  
   copyPointCloud(*voxel_cloud, *obstacle_cloud);
 
   float threshold = 0.392;
@@ -154,7 +157,7 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     normals->points[i].x = voxel_cloud->points[i].x;
     normals->points[i].y = voxel_cloud->points[i].y;
     normals->points[i].z = voxel_cloud->points[i].z;
-
+    
     geometry_msgs::PoseStamped pose;
     geometry_msgs::Quaternion msg;
 
@@ -172,6 +175,8 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     // tf::Matrix3x3 mat(q);
     // double roll, pitch, yaw;
     // mat.getRPY(roll, pitch, yaw);
+
+    normals->points[i].curvature = rad;
 
     tf::quaternionTFToMsg(q, msg);
     pose.pose.position.x = normals->points[i].x;
@@ -219,11 +224,13 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
   pcl::toROSMsg (*z_passthrough_cloud2, cloud2_filtered);
   pcl::toROSMsg (*obstacle_passthrough, obstacle2);
+  pcl::toROSMsg (*normals, jsk_cloud);
   sensor_msgs::convertPointCloud2ToPointCloud(obstacle2, obstacle);
 
   // Publish the data
   pub.publish (cloud2_filtered);
   pub2.publish (obstacle);
+  pub3.publish (jsk_cloud);
 
   int j, k;
   j=poseArray.poses.size();
