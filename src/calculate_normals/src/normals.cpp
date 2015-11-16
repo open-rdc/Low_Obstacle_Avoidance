@@ -34,8 +34,6 @@
 ros::Publisher pub;
 ros::Publisher pub2;
 ros::Publisher low_obstacle_pub;
-ros::Publisher poseArrayPub;
-geometry_msgs::PoseArray poseArray;
 sensor_msgs::PointCloud obstacle;
 
 class Calculate_Normal{
@@ -44,10 +42,9 @@ public:
     point_cloud_sub = nh.subscribe("/hokuyo3d/hokuyo_cloud", 1, &Calculate_Normal::normalCallBack, this);
     scan_sub = nh.subscribe("/scan", 1, &Calculate_Normal::scanCallBack, this);
     pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 4000, 1);
-    poseArrayPub = nh.advertise<geometry_msgs::PoseArray>("/normal_vectors", 5000, 1);
     low_obstacle_pub = nh.advertise<sensor_msgs::PointCloud2> ("/low_obstacle_cloud", 600, 1);
     pub2 = nh.advertise<sensor_msgs::PointCloud> ("/obstacle_cloud", 600, 1);
-    pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/jsk_cloud", 1000);
+    pub3 = nh.advertise<pcl::PointCloud<pcl::PointNormal> > ("/normals", 5000);
     ros::Rate loop_rate(30);
   }
 
@@ -58,7 +55,6 @@ private:
   ros::Publisher pub;
   ros::Publisher pub2;
   ros::Publisher pub3;
-  ros::Publisher poseArrayPub;
   ros::Publisher low_obstacle_pub;
   sensor_msgs::PointCloud d_cloud;
   sensor_msgs::PointCloud base_cloud;
@@ -71,7 +67,7 @@ private:
   sensor_msgs::PointCloud passthrough_scan_cloud;
   sensor_msgs::PointCloud2 passthrough_scan_cloud2;
   sensor_msgs::PointCloud2 scan_cloud2;
-  sensor_msgs::PointCloud2 jsk_cloud;
+  sensor_msgs::PointCloud2 normals;
   tf::TransformListener listener;
   tf::TransformListener scan_listener;
 
@@ -101,11 +97,6 @@ private:
       sensor_msgs::convertPointCloudToPointCloud2 (base_cloud, in_cloud2);
 
       pcl::fromROSMsg (in_cloud2, *pcl_cloud);
-
-      poseArray.poses.clear();
-      poseArray.header.stamp = ros::Time(0);
-      poseArray.header.frame_id = pcl_cloud->header.frame_id; //EDITED
-      ROS_INFO_STREAM("poseArray.header: frame=" << poseArray.header.frame_id);
 
       //passthrough
       pcl::PassThrough<pcl::PointXYZ> z_pass;
@@ -158,11 +149,8 @@ private:
           normals->points[i].y = voxel_cloud->points[i].y;
           normals->points[i].z = voxel_cloud->points[i].z;
 
-          geometry_msgs::PoseStamped pose;
-          geometry_msgs::Quaternion msg;
-
           tf::Vector3 axis_vector(normals->points[i].normal[0], normals->points[i].normal[1], normals->points[i].normal[2]);
-          tf::Vector3 up_vector(1.0, 0.0, 0.0);
+          tf::Vector3 up_vector(0.0, 0.0, 1.0);
 
           //cross(外積)　dot(内積) normalize(正規化)
           tf::Vector3 right_vector = axis_vector.cross(up_vector);
@@ -176,21 +164,21 @@ private:
           // double roll, pitch, yaw;
           // mat.getRPY(roll, pitch, yaw);
 
-          normals->points[i].curvature = rad;
-
-          tf::quaternionTFToMsg(q, msg);
-          pose.pose.position.x = normals->points[i].x;
-          pose.pose.position.y = normals->points[i].y;
-          pose.pose.position.z = normals->points[i].z;
-          pose.pose.orientation = msg;
-          poseArray.poses.push_back(pose.pose);
+          float cuv;
+          if(rad < 1.57){
+              cuv = 1.57 - rad;
+          }else{
+              cuv = rad - 1.57;
+          }
+          normals->points[i].curvature = cuv;
 
           //if(!((1.57-0.0789) < rad && rad < (1.65+0.0789)))
           //if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
           //if(!((1.76-0.0798) < rad && rad < (1.76+0.0798)))
           // if(!((1.76-0.392) < rad && rad < (1.76+0.392)))
-          if(!((thresholdM) < rad && rad < (thresholdP)))
-              // if(!((thresholdM) < pitch && pitch < (thresholdP)))
+          // if(!((thresholdM) < rad && rad < (thresholdP)))
+          // if(!((thresholdM) < pitch && pitch < (thresholdP)))
+          if(!(cuv < threshold))
           {
               //ROS_INFO("get_angle: %lf\n", rad);
               voxel_cloud->points[i].x = NaN;
@@ -198,7 +186,7 @@ private:
               voxel_cloud->points[i].z = NaN;
               obstacle_cloud->points[i].x = normals->points[i].x;
               obstacle_cloud->points[i].y = normals->points[i].y;
-              obstacle_cloud->points[i].z = 0.0;
+              obstacle_cloud->points[i].z = normals->points[i].z;
           }else{
               voxel_cloud->points[i].x = normals->points[i].x;
               voxel_cloud->points[i].y = normals->points[i].y;
@@ -220,22 +208,17 @@ private:
       obstacle_pass.setFilterLimits (-1.0, 0.2);
       obstacle_pass.filter (*obstacle_passthrough);
 
-      poseArrayPub.publish(poseArray);
-
       pcl::toROSMsg (*z_passthrough_cloud2, cloud2_filtered);
       pcl::toROSMsg (*obstacle_passthrough, obstacle2);
-      pcl::toROSMsg (*normals, jsk_cloud);
       sensor_msgs::convertPointCloud2ToPointCloud(obstacle2, obstacle);
 
       // Publish the data
       pub.publish (cloud2_filtered);
       pub2.publish (obstacle);
-      pub3.publish (jsk_cloud);
+      pub3.publish (normals);
 
-      int j, k;
-      j=poseArray.poses.size();
+      int k;
       k=obstacle.points.size();
-      ROS_INFO("poseArray size: %d\n", j);
       ROS_INFO("obstacle size: %d\n", k);
   }
 
