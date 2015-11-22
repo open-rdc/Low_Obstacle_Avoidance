@@ -67,7 +67,7 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     try{
         listener.waitForTransform("/base_link", d_cloud.header.frame_id, ros::Time(0), ros::Duration(10.0));
         //listener.lookupTransform("/base_link", "/hokuyo3d", ros::Time(0), transform1);
-        listener.transformPointCloud("/base_link", base_cloud.header.stamp, d_cloud, d_cloud.header.frame_id, base_cloud);
+        listener.transformPointCloud("/base_link", d_cloud.header.stamp, d_cloud, d_cloud.header.frame_id, base_cloud);
     }catch(tf::TransformException &ex){
         ROS_ERROR("%s", ex.what());
         ros::Duration(1.0).sleep();
@@ -117,7 +117,7 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
     copyPointCloud(*voxel_cloud, *obstacle_cloud);
 
-    float threshold = 0.392;
+    float threshold = 0.0789;
     float NaN = std::numeric_limits<float>::quiet_NaN();
     //publish normal vectors
     for(size_t i = 0; i<normals->points.size(); ++i)
