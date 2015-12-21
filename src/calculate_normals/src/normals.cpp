@@ -29,7 +29,7 @@
 class Calculate_Normal{
 public:
     Calculate_Normal(){
-    point_cloud_sub = nh.subscribe("/hokuyo3d/hokuyo_cloud", 1, &Calculate_Normal::normalCallBack, this);
+    point_cloud_sub = nh.subscribe("/cloud_pcd", 1, &Calculate_Normal::normalCallBack, this);
     pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 4000, 1);
     pub2 = nh.advertise<sensor_msgs::PointCloud> ("/obstacle_cloud", 600, 1);
     pub3 = nh.advertise<pcl::PointCloud<pcl::PointNormal> > ("/normals", 5000);
@@ -48,9 +48,10 @@ private:
     sensor_msgs::PointCloud2 in_cloud2;
     sensor_msgs::PointCloud2 cloud_filtered;
     sensor_msgs::PointCloud2 obstacle2;
+    sensor_msgs::PointCloud2 d2;
     tf::TransformListener listener;
 
-void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
+void normalCallBack (const sensor_msgs::PointCloud2ConstPtr& in_cloud1)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -63,7 +64,8 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_passthrough(new pcl::PointCloud<pcl::PointXYZ>);   
     pcl::PointCloud<pcl::PointNormal>::Ptr normals(new pcl::PointCloud<pcl::PointNormal>);
 
-    d_cloud = *in_cloud1;
+    d2 = *in_cloud1;
+    sensor_msgs::convertPointCloud2ToPointCloud (d2, d_cloud);
     try{
         listener.waitForTransform("/base_link", d_cloud.header.frame_id, ros::Time(0), ros::Duration(10.0));
         //listener.lookupTransform("/base_link", "/hokuyo3d", ros::Time(0), transform1);
