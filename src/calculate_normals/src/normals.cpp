@@ -77,26 +77,26 @@ void normalCallBack (const sensor_msgs::PointCloud2ConstPtr& in_cloud1)
 
     sensor_msgs::convertPointCloudToPointCloud2 (base_cloud, in_cloud2);
 
-    pcl::fromROSMsg (in_cloud2, *pcl_cloud);
+    pcl::fromROSMsg (in_cloud2, *voxel_cloud);
 
     //passthrough
-    pcl::PassThrough<pcl::PointXYZ> z_pass;
-    z_pass.setInputCloud (pcl_cloud);
-    z_pass.setFilterFieldName("z");
-    z_pass.setFilterLimits (-1.0, 1.0);
-    z_pass.filter (*z_passthrough_cloud);
+    // pcl::PassThrough<pcl::PointXYZ> z_pass;
+    // z_pass.setInputCloud (pcl_cloud);
+    // z_pass.setFilterFieldName("z");
+    // z_pass.setFilterLimits (-1.0, 1.0);
+    // z_pass.filter (*z_passthrough_cloud);
 
-    pcl::PassThrough<pcl::PointXYZ> y_pass;
-    y_pass.setInputCloud (z_passthrough_cloud);
-    y_pass.setFilterFieldName("y");
-    y_pass.setFilterLimits (-10.0, 10.0);
-    y_pass.filter (*y_passthrough_cloud);
-
-    pcl::PassThrough<pcl::PointXYZ> x_pass;
-    x_pass.setInputCloud (y_passthrough_cloud);
-    x_pass.setFilterFieldName("x");
-    x_pass.setFilterLimits (0.0, 10.0);
-    x_pass.filter (*voxel_cloud);
+    // pcl::PassThrough<pcl::PointXYZ> y_pass;
+    // y_pass.setInputCloud (z_passthrough_cloud);
+    // y_pass.setFilterFieldName("y");
+    // y_pass.setFilterLimits (-10.0, 10.0);
+    // y_pass.filter (*y_passthrough_cloud);
+    //
+    // pcl::PassThrough<pcl::PointXYZ> x_pass;
+    // x_pass.setInputCloud (y_passthrough_cloud);
+    // x_pass.setFilterFieldName("x");
+    // x_pass.setFilterLimits (0.0, 10.0);
+    // x_pass.filter (*voxel_cloud);
 
     //outlier removal
     // pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
@@ -106,15 +106,15 @@ void normalCallBack (const sensor_msgs::PointCloud2ConstPtr& in_cloud1)
     // sor.filter(*sor_passthrough_cloud); 
 
     //voxel_grid
-  //  pcl::VoxelGrid<pcl::PointXYZ> vg;
-  //  vg.setInputCloud (passthrough_cloud);
-  //  vg.setLeafSize (0.05, 0.05, 0.05);
-  //  vg.filter (*voxel_cloud);
-
+   // pcl::VoxelGrid<pcl::PointXYZ> vg;
+   // vg.setInputCloud (passthrough_cloud);
+   // vg.setLeafSize (0.05, 0.05, 0.05);
+   // vg.filter (*voxel_cloud);
+   //
     // estimate normals
     pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
     ne.setInputCloud(voxel_cloud);
-    ne.setKSearch (24);
+    ne.setKSearch (4);
     ne.compute(*normals);
 
     copyPointCloud(*voxel_cloud, *obstacle_cloud);
@@ -180,14 +180,14 @@ void normalCallBack (const sensor_msgs::PointCloud2ConstPtr& in_cloud1)
     z_pass2.setFilterLimits (-1.0, 0.2);
     z_pass2.filter (*z_passthrough_cloud2);
 
-    pcl::PassThrough<pcl::PointXYZ> obstacle_pass;
-    obstacle_pass.setInputCloud (obstacle_cloud);
-    obstacle_pass.setFilterFieldName("z");
-    obstacle_pass.setFilterLimits (-1.0, 0.2);
-    obstacle_pass.filter (*obstacle_passthrough);
+    // pcl::PassThrough<pcl::PointXYZ> obstacle_pass;
+    // obstacle_pass.setInputCloud (obstacle_cloud);
+    // obstacle_pass.setFilterFieldName("z");
+    // obstacle_pass.setFilterLimits (-1.0, 0.2);
+    // obstacle_pass.filter (*obstacle_passthrough);
 
     pcl::toROSMsg (*z_passthrough_cloud2, cloud_filtered);
-    pcl::toROSMsg (*obstacle_passthrough, obstacle2);
+    pcl::toROSMsg (*obstacle_cloud, obstacle2);
     sensor_msgs::convertPointCloud2ToPointCloud(obstacle2, obstacle);
 
     // Publish the data
