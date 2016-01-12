@@ -94,7 +94,7 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     x_pass.setInputCloud (y_passthrough_cloud);
     x_pass.setFilterFieldName("x");
     x_pass.setFilterLimits (0.0, 10.0);
-    x_pass.filter (*voxel_cloud);
+    x_pass.filter (*passthrough_cloud);
 
     //outlier removal
     // pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
@@ -104,10 +104,10 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     // sor.filter(*sor_passthrough_cloud); 
 
     //voxel_grid
-  //  pcl::VoxelGrid<pcl::PointXYZ> vg;
-  //  vg.setInputCloud (passthrough_cloud);
-  //  vg.setLeafSize (0.05, 0.05, 0.05);
-  //  vg.filter (*voxel_cloud);
+   pcl::VoxelGrid<pcl::PointXYZ> vg;
+   vg.setInputCloud (passthrough_cloud);
+   vg.setLeafSize (0.05, 0.05, 0.05);
+   vg.filter (*voxel_cloud);
 
     // estimate normals
     pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
@@ -117,7 +117,7 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
     copyPointCloud(*voxel_cloud, *obstacle_cloud);
 
-    float threshold = 0.0789;
+    float threshold = 1.57-0.0872;
     float NaN = std::numeric_limits<float>::quiet_NaN();
     //publish normal vectors
     for(size_t i = 0; i<normals->points.size(); ++i)
