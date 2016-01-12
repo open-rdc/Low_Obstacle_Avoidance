@@ -30,9 +30,9 @@ class Calculate_Normal{
 public:
     Calculate_Normal(){
     point_cloud_sub = nh.subscribe("/hokuyo3d/hokuyo_cloud", 1, &Calculate_Normal::normalCallBack, this);
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 4000, 1);
-    pub2 = nh.advertise<sensor_msgs::PointCloud> ("/obstacle_cloud", 600, 1);
-    pub3 = nh.advertise<pcl::PointCloud<pcl::PointNormal> > ("/normals", 5000);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud2", 4000, 1);
+    pub2 = nh.advertise<sensor_msgs::PointCloud> ("/obstacle_cloud2", 600, 1);
+    pub3 = nh.advertise<pcl::PointCloud<pcl::PointNormal> > ("/normals2", 5000);
     ros::Rate loop_rate(10);
   }
 
@@ -93,7 +93,7 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     pcl::PassThrough<pcl::PointXYZ> x_pass;
     x_pass.setInputCloud (y_passthrough_cloud);
     x_pass.setFilterFieldName("x");
-    x_pass.setFilterLimits (0.0, 10.0);
+    x_pass.setFilterLimits (0.30, 10.0);
     x_pass.filter (*passthrough_cloud);
 
     //outlier removal
@@ -112,12 +112,12 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     // estimate normals
     pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
     ne.setInputCloud(voxel_cloud);
-    ne.setKSearch (24);
+    ne.setKSearch (20);
     ne.compute(*normals);
 
     copyPointCloud(*voxel_cloud, *obstacle_cloud);
 
-    float threshold = 1.57-0.0872;
+    float threshold = 1.57-0.244;
     float NaN = std::numeric_limits<float>::quiet_NaN();
     //publish normal vectors
     for(size_t i = 0; i<normals->points.size(); ++i)
@@ -183,9 +183,15 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     obstacle_pass.setFilterFieldName("z");
     obstacle_pass.setFilterLimits (-1.0, 0.2);
     obstacle_pass.filter (*obstacle_passthrough);
+    //outlier removal
+    pcl::RadiusOutlierRemoval<pcl::PointXYZ> sor;
+    sor.setInputCloud(obstacle_passthrough);
+    sor.setRadiusSearch(0.05);
+    sor.setMinNeighborsInRadius(2);
+    sor.filter(*sor_passthrough_cloud); 
 
     pcl::toROSMsg (*z_passthrough_cloud2, cloud_filtered);
-    pcl::toROSMsg (*obstacle_passthrough, obstacle2);
+    pcl::toROSMsg (*sor_passthrough_cloud, obstacle2);
     sensor_msgs::convertPointCloud2ToPointCloud(obstacle2, obstacle);
 
     // Publish the data
