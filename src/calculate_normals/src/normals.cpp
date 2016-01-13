@@ -30,9 +30,9 @@ class Calculate_Normal{
 public:
     Calculate_Normal(){
     point_cloud_sub = nh.subscribe("/hokuyo3d/hokuyo_cloud", 1, &Calculate_Normal::normalCallBack, this);
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud2", 4000, 1);
-    pub2 = nh.advertise<sensor_msgs::PointCloud> ("/obstacle_cloud2", 600, 1);
-    pub3 = nh.advertise<pcl::PointCloud<pcl::PointNormal> > ("/normals2", 5000);
+    pub = nh.advertise<sensor_msgs::PointCloud2> ("/filtered_cloud", 4000, 1);
+    pub2 = nh.advertise<sensor_msgs::PointCloud> ("/obstacle_cloud", 600, 1);
+    pub3 = nh.advertise<pcl::PointCloud<pcl::PointNormal> > ("/normals", 5000);
     ros::Rate loop_rate(10);
   }
 
