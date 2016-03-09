@@ -47,7 +47,7 @@ private:
     sensor_msgs::PointCloud obstacle;
     sensor_msgs::PointCloud2 in_cloud2;
     sensor_msgs::PointCloud2 cloud_filtered;
-    sensor_msgs::PointCloud2 obstacle2;
+    sensor_msgs::PointCloud2 obstacle_cloud2;
     tf::TransformListener listener;
 
 void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
@@ -55,18 +55,14 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr z_passthrough_cloud(new pcl::PointCloud<pcl::PointXYZ>);   
-    pcl::PointCloud<pcl::PointXYZ>::Ptr z_passthrough_cloud2(new pcl::PointCloud<pcl::PointXYZ>);   
     pcl::PointCloud<pcl::PointXYZ>::Ptr y_passthrough_cloud(new pcl::PointCloud<pcl::PointXYZ>);   
     pcl::PointCloud<pcl::PointXYZ>::Ptr passthrough_cloud(new pcl::PointCloud<pcl::PointXYZ>);   
-    pcl::PointCloud<pcl::PointXYZ>::Ptr sor_passthrough_cloud(new pcl::PointCloud<pcl::PointXYZ>);   
     pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_cloud(new pcl::PointCloud<pcl::PointXYZ>);   
-    pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_passthrough(new pcl::PointCloud<pcl::PointXYZ>);   
     pcl::PointCloud<pcl::PointNormal>::Ptr normals(new pcl::PointCloud<pcl::PointNormal>);
 
     d_cloud = *in_cloud1;
     try{
         listener.waitForTransform("/base_link", d_cloud.header.frame_id, ros::Time(0), ros::Duration(10.0));
-        //listener.lookupTransform("/base_link", "/hokuyo3d", ros::Time(0), transform1);
         listener.transformPointCloud("/base_link", d_cloud.header.stamp, d_cloud, d_cloud.header.frame_id, base_cloud);
     }catch(tf::TransformException &ex){
         ROS_ERROR("%s", ex.what());
@@ -93,21 +89,8 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     pcl::PassThrough<pcl::PointXYZ> x_pass;
     x_pass.setInputCloud (y_passthrough_cloud);
     x_pass.setFilterFieldName("x");
-    x_pass.setFilterLimits (0.30, 10.0);
+    x_pass.setFilterLimits (0.0, 10.0);
     x_pass.filter (*passthrough_cloud);
-
-    //outlier removal
-    // pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-    // sor.setInputCloud(passthrough_cloud);
-    // sor.setMeanK(50);
-    // sor.setStddevMulThresh(1.0);
-    // sor.filter(*sor_passthrough_cloud); 
-
-    //voxel_grid
-   pcl::VoxelGrid<pcl::PointXYZ> vg;
-   vg.setInputCloud (passthrough_cloud);
-   vg.setLeafSize (0.05, 0.05, 0.05);
-   vg.filter (*voxel_cloud);
 
     // estimate normals
     pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
@@ -119,7 +102,8 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
     float threshold = 1.57-0.244;
     float NaN = std::numeric_limits<float>::quiet_NaN();
-    //publish normal vectors
+    
+    //calculate normal vectors
     for(size_t i = 0; i<normals->points.size(); ++i)
     {
         normals->points[i].x = voxel_cloud->points[i].x;
@@ -135,12 +119,6 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
         tf::Quaternion q(right_vector, -1.0*acos(axis_vector.dot(up_vector)));
         q.normalize();
         float rad = q.getAngle();
-        // float axis = q.getAxis();
-
-        // tf::Matrix3x3 mat(q);
-        // double roll, pitch, yaw;
-        // mat.getRPY(roll, pitch, yaw);
-
         float cuv;
         if(rad < 1.57){
             cuv = 1.57 - rad;
@@ -149,12 +127,6 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
         }
         normals->points[i].curvature = cuv;
 
-        //if(!((1.57-0.0789) < rad && rad < (1.65+0.0789)))
-        //if(!((1.57-0.785) < rad && rad <(1.57+0.78)))
-        //if(!((1.76-0.0798) < rad && rad < (1.76+0.0798)))
-        // if(!((1.76-0.392) < rad && rad < (1.76+0.392)))
-        // if(!((thresholdM) < rad && rad < (thresholdP)))
-        // if(!((thresholdM) < pitch && pitch < (thresholdP)))
         if(cuv < threshold)
         {
             voxel_cloud->points[i].x = NaN;
@@ -190,9 +162,9 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
     sor.setMinNeighborsInRadius(2);
     sor.filter(*sor_passthrough_cloud); 
 
-    pcl::toROSMsg (*z_passthrough_cloud2, cloud_filtered);
-    pcl::toROSMsg (*sor_passthrough_cloud, obstacle2);
-    sensor_msgs::convertPointCloud2ToPointCloud(obstacle2, obstacle);
+    pcl::toROSMsg (*voxel_cloud, cloud_filtered);
+    pcl::toROSMsg (*obstacle_cloud, obstacle_cloud2);
+    sensor_msgs::convertPointCloud2ToPointCloud(obstacle_cloud2, obstacle);
 
     // Publish the data
     pub.publish (cloud_filtered);
