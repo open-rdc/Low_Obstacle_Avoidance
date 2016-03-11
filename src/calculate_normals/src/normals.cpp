@@ -96,11 +96,11 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
   //estimate normals
   pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
-  ne.setInputCloud(voxel_cloud);
+  ne.setInputCloud(passthrough_cloud);
   ne.setKSearch (20);
   ne.compute(*normals);
 
-  copyPointCloud(*voxel_cloud, *obstacle_cloud);
+  copyPointCloud(*passthrough_cloud, *obstacle_cloud);
 
   float threshold = 1.57-0.244;
   float NaN = std::numeric_limits<float>::quiet_NaN();
@@ -108,9 +108,9 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
   //calculate normal vectors
   for(size_t i = 0; i<normals->points.size(); ++i)
   {
-    normals->points[i].x = voxel_cloud->points[i].x;
-    normals->points[i].y = voxel_cloud->points[i].y;
-    normals->points[i].z = voxel_cloud->points[i].z;
+    normals->points[i].x = passthrough_cloud->points[i].x;
+    normals->points[i].y = passthrough_cloud->points[i].y;
+    normals->points[i].z = passthrough_cloud->points[i].z;
 
     tf::Vector3 axis_vector(normals->points[i].normal[0], normals->points[i].normal[1], normals->points[i].normal[2]);
     tf::Vector3 up_vector(0.0, 0.0, 1.0);
@@ -131,23 +131,23 @@ void normalCallBack (const sensor_msgs::PointCloudConstPtr& in_cloud1)
 
     if(cuv < threshold)
     {
-      voxel_cloud->points[i].x = NaN;
-      voxel_cloud->points[i].y = NaN;
-      voxel_cloud->points[i].z = NaN;
+      passthrough_cloud->points[i].x = NaN;
+      passthrough_cloud->points[i].y = NaN;
+      passthrough_cloud->points[i].z = NaN;
       obstacle_cloud->points[i].x = normals->points[i].x;
       obstacle_cloud->points[i].y = normals->points[i].y;
       obstacle_cloud->points[i].z = normals->points[i].z;
     }else{
-      voxel_cloud->points[i].x = normals->points[i].x;
-      voxel_cloud->points[i].y = normals->points[i].y;
-      voxel_cloud->points[i].z = normals->points[i].z;
+      passthrough_cloud->points[i].x = normals->points[i].x;
+      passthrough_cloud->points[i].y = normals->points[i].y;
+      passthrough_cloud->points[i].z = normals->points[i].z;
       obstacle_cloud->points[i].x = NaN;
       obstacle_cloud->points[i].y = NaN;
       obstacle_cloud->points[i].z = NaN;
     }
   }
 
-  pcl::toROSMsg (*voxel_cloud, cloud_filtered);
+  pcl::toROSMsg (*passthrough_cloud, cloud_filtered);
   pcl::toROSMsg (*obstacle_cloud, obstacle_cloud2);
   sensor_msgs::convertPointCloud2ToPointCloud(obstacle_cloud2, obstacle);
 
